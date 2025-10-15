@@ -2,6 +2,7 @@
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::RwLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -10,15 +11,18 @@ pub enum Language {
     Chinese,
 }
 
-impl Language {
-    pub fn from_str(s: &str) -> Option<Self> {
+impl FromStr for Language {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "en" | "english" => Some(Language::English),
-            "zh" | "chinese" | "中文" => Some(Language::Chinese),
-            _ => None,
+            "en" | "english" => Ok(Language::English),
+            "zh" | "chinese" | "中文" => Ok(Language::Chinese),
+            _ => Err(()),
         }
     }
-
+}
+impl Language {
     pub fn code(&self) -> &'static str {
         match self {
             Language::English => "en",
@@ -268,23 +272,38 @@ static TRANSLATIONS: Lazy<HashMap<TranslationKey, &'static str>> = Lazy::new(|| 
     m.insert((Language::English, "error"), "Error");
     m.insert((Language::Chinese, "error"), "错误");
 
-    m.insert((Language::English, "updating_config"), "Updating configuration...");
+    m.insert(
+        (Language::English, "updating_config"),
+        "Updating configuration...",
+    );
     m.insert((Language::Chinese, "updating_config"), "正在更新配置...");
 
     // Port configuration
     m.insert((Language::English, "port_config"), "Port Configuration");
     m.insert((Language::Chinese, "port_config"), "端口配置");
 
-    m.insert((Language::English, "modify_http_port"), "Modify Http/Sock5 port");
-    m.insert((Language::Chinese, "modify_http_port"), "修改Http/Sock5端口");
+    m.insert(
+        (Language::English, "modify_http_port"),
+        "Modify Http/Sock5 port",
+    );
+    m.insert(
+        (Language::Chinese, "modify_http_port"),
+        "修改Http/Sock5端口",
+    );
 
-    m.insert((Language::English, "modify_redir_port"), "Modify redirect port");
+    m.insert(
+        (Language::English, "modify_redir_port"),
+        "Modify redirect port",
+    );
     m.insert((Language::Chinese, "modify_redir_port"), "修改静态路由端口");
 
     m.insert((Language::English, "modify_dns_port"), "Modify DNS port");
     m.insert((Language::Chinese, "modify_dns_port"), "修改DNS监听端口");
 
-    m.insert((Language::English, "modify_panel_port"), "Modify panel port");
+    m.insert(
+        (Language::English, "modify_panel_port"),
+        "Modify panel port",
+    );
     m.insert((Language::Chinese, "modify_panel_port"), "修改面板访问端口");
 
     m.insert((Language::English, "return_menu"), "Return to menu");
@@ -310,27 +329,54 @@ static TRANSLATIONS: Lazy<HashMap<TranslationKey, &'static str>> = Lazy::new(|| 
     m.insert((Language::Chinese, "reset_dns"), "重置默认DNS配置");
 
     // Firewall configuration
-    m.insert((Language::English, "firewall_config"), "Firewall Configuration");
+    m.insert(
+        (Language::English, "firewall_config"),
+        "Firewall Configuration",
+    );
     m.insert((Language::Chinese, "firewall_config"), "防火墙配置");
 
-    m.insert((Language::English, "public_dashboard"), "Public access to Dashboard");
-    m.insert((Language::Chinese, "public_dashboard"), "公网访问Dashboard面板");
+    m.insert(
+        (Language::English, "public_dashboard"),
+        "Public access to Dashboard",
+    );
+    m.insert(
+        (Language::Chinese, "public_dashboard"),
+        "公网访问Dashboard面板",
+    );
 
-    m.insert((Language::English, "public_proxy"), "Public access to Socks/Http proxy");
-    m.insert((Language::Chinese, "public_proxy"), "公网访问Socks/Http代理");
+    m.insert(
+        (Language::English, "public_proxy"),
+        "Public access to Socks/Http proxy",
+    );
+    m.insert(
+        (Language::Chinese, "public_proxy"),
+        "公网访问Socks/Http代理",
+    );
 
-    m.insert((Language::English, "custom_ipv4"), "Custom transparent routing ipv4 segment");
+    m.insert(
+        (Language::English, "custom_ipv4"),
+        "Custom transparent routing ipv4 segment",
+    );
     m.insert((Language::Chinese, "custom_ipv4"), "自定义透明路由ipv4网段");
 
     // IPv6 configuration
     m.insert((Language::English, "ipv6_config"), "IPv6 Configuration");
     m.insert((Language::Chinese, "ipv6_config"), "IPv6配置");
 
-    m.insert((Language::English, "ipv6_transparent_proxy"), "IPv6 transparent proxy");
-    m.insert((Language::Chinese, "ipv6_transparent_proxy"), "ipv6透明代理");
+    m.insert(
+        (Language::English, "ipv6_transparent_proxy"),
+        "IPv6 transparent proxy",
+    );
+    m.insert(
+        (Language::Chinese, "ipv6_transparent_proxy"),
+        "ipv6透明代理",
+    );
 
     // Log push configuration
-    m.insert((Language::English, "log_push_config"), "Log Push Configuration");
+    m.insert(
+        (Language::English, "log_push_config"),
+        "Log Push Configuration",
+    );
     m.insert((Language::Chinese, "log_push_config"), "日志推送配置");
 
     m.insert((Language::English, "telegram_push"), "Telegram push");
@@ -352,7 +398,10 @@ static TRANSLATIONS: Lazy<HashMap<TranslationKey, &'static str>> = Lazy::new(|| 
     m.insert((Language::Chinese, "synochat_push"), "SynoChat推送");
 
     // Update options
-    m.insert((Language::English, "update_subscription"), "Update subscription");
+    m.insert(
+        (Language::English, "update_subscription"),
+        "Update subscription",
+    );
     m.insert((Language::Chinese, "update_subscription"), "更新订阅");
 
     m.insert((Language::English, "update_core"), "Update core");
@@ -361,14 +410,26 @@ static TRANSLATIONS: Lazy<HashMap<TranslationKey, &'static str>> = Lazy::new(|| 
     m.insert((Language::English, "update_scripts"), "Update scripts");
     m.insert((Language::Chinese, "update_scripts"), "更新脚本");
 
-    m.insert((Language::English, "update_geoip_db"), "Update GeoIP database");
+    m.insert(
+        (Language::English, "update_geoip_db"),
+        "Update GeoIP database",
+    );
     m.insert((Language::Chinese, "update_geoip_db"), "更新GeoIP数据库");
 
     m.insert((Language::English, "error_invalid_input"), "Invalid input!");
-    m.insert((Language::Chinese, "error_invalid_input"), "请输入正确的数字！");
+    m.insert(
+        (Language::Chinese, "error_invalid_input"),
+        "请输入正确的数字！",
+    );
 
-    m.insert((Language::English, "updating_subscription"), "Updating subscription...");
-    m.insert((Language::Chinese, "updating_subscription"), "正在更新订阅...");
+    m.insert(
+        (Language::English, "updating_subscription"),
+        "Updating subscription...",
+    );
+    m.insert(
+        (Language::Chinese, "updating_subscription"),
+        "正在更新订阅...",
+    );
 
     m
 });

@@ -68,10 +68,7 @@ impl Logger {
 
     /// Set log file path
     pub fn with_file(mut self, path: PathBuf) -> std::io::Result<Self> {
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(path)?;
+        let file = OpenOptions::new().create(true).append(true).open(path)?;
         self.log_file = Some(Mutex::new(file));
         Ok(self)
     }
@@ -101,11 +98,10 @@ impl Logger {
         }
 
         // Write to log file
-        if let Some(ref file) = self.log_file {
-            if let Ok(mut f) = file.lock() {
+        if let Some(ref file) = self.log_file
+            && let Ok(mut f) = file.lock() {
                 let _ = writeln!(f, "{}", log_text);
             }
-        }
     }
 
     /// Log debug message
@@ -137,12 +133,11 @@ impl Logger {
         }
 
         // Also write to log file
-        if let Some(ref file) = self.log_file {
-            if let Ok(mut f) = file.lock() {
+        if let Some(ref file) = self.log_file
+            && let Ok(mut f) = file.lock() {
                 let timestamp = Local::now().format("%Y-%m-%d_%H:%M:%S");
                 let _ = writeln!(f, "{}~{}", timestamp, message);
             }
-        }
     }
 
     /// Push log message to configured services
@@ -186,7 +181,11 @@ impl Logger {
         }
     }
 
-    async fn push_telegram(&self, message: &str, config: &TelegramConfig) -> Result<(), Box<dyn std::error::Error>> {
+    async fn push_telegram(
+        &self,
+        message: &str,
+        config: &TelegramConfig,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
         let url = format!("https://api.telegram.org/bot{}/sendMessage", config.token);
         let body = serde_json::json!({
@@ -197,7 +196,11 @@ impl Logger {
         Ok(())
     }
 
-    async fn push_pushdeer(&self, message: &str, key: &str) -> Result<(), Box<dyn std::error::Error>> {
+    async fn push_pushdeer(
+        &self,
+        message: &str,
+        key: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
         let url = "https://api2.pushdeer.com/message/push";
         let body = serde_json::json!({
@@ -220,7 +223,11 @@ impl Logger {
         Ok(())
     }
 
-    async fn push_pushover(&self, message: &str, config: &PushoverConfig) -> Result<(), Box<dyn std::error::Error>> {
+    async fn push_pushover(
+        &self,
+        message: &str,
+        config: &PushoverConfig,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
         let url = "https://api.pushover.net/1/messages.json";
         let body = serde_json::json!({
@@ -233,7 +240,11 @@ impl Logger {
         Ok(())
     }
 
-    async fn push_pushplus(&self, message: &str, token: &str) -> Result<(), Box<dyn std::error::Error>> {
+    async fn push_pushplus(
+        &self,
+        message: &str,
+        token: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
         let url = "http://www.pushplus.plus/send";
         let body = serde_json::json!({
@@ -245,13 +256,20 @@ impl Logger {
         Ok(())
     }
 
-    async fn push_synochat(&self, message: &str, config: &SynoChatConfig) -> Result<(), Box<dyn std::error::Error>> {
+    async fn push_synochat(
+        &self,
+        message: &str,
+        config: &SynoChatConfig,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
         let url = format!(
             "{}/webapi/entry.cgi?api=SYNO.Chat.External&method=chatbot&version=2&token={}",
             config.url, config.token
         );
-        let body = format!("payload={{\"text\":\"{}\", \"user_ids\":[{}]}}", message, config.user_id);
+        let body = format!(
+            "payload={{\"text\":\"{}\", \"user_ids\":[{}]}}",
+            message, config.user_id
+        );
         client.post(&url).body(body).send().await?;
         Ok(())
     }

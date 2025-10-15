@@ -41,10 +41,9 @@ impl DDNSManager {
     /// Show main menu
     pub fn show_menu(&mut self) -> Result<()> {
         if !self.check_ddns_available() {
-            self.logger.error("本脚本依赖OpenWrt内置的DDNS服务,当前设备无法运行");
-            return Err(ShellCrashError::Unknown(
-                "DDNS服务不可用".to_string(),
-            ).into());
+            self.logger
+                .error("本脚本依赖OpenWrt内置的DDNS服务,当前设备无法运行");
+            return Err(ShellCrashError::Unknown("DDNS服务不可用".to_string()).into());
         }
 
         loop {
@@ -61,17 +60,11 @@ impl DDNSManager {
                 for (idx, service) in services.iter().enumerate() {
                     let ip = self.get_service_ip(&service.name).unwrap_or_default();
                     let enabled = if service.enabled { "1" } else { "0" };
-                    println!(
-                        " {}   {}  {}   {}",
-                        idx + 1,
-                        service.domain,
-                        enabled,
-                        ip
-                    );
+                    println!(" {}   {}  {}   {}", idx + 1, service.domain, enabled, ip);
                 }
             }
 
-            let mut options = vec!["添加DDNS服务", "退出"];
+            let options = vec!["添加DDNS服务", "退出"];
             let selection = Select::new()
                 .with_prompt("请选择")
                 .items(&options)
@@ -187,17 +180,14 @@ impl DDNSManager {
 
     /// Add a DDNS service
     pub fn add_service(&mut self, service: DDNSService) -> Result<()> {
-        self.logger.info(&format!("添加DDNS服务: {}", service.domain));
+        self.logger
+            .info(&format!("添加DDNS服务: {}", service.domain));
 
         // Write to UCI config
-        self.shell.execute(&format!(
-            "uci set ddns.{}=service",
-            service.name
-        ))?;
-        self.shell.execute(&format!(
-            "uci set ddns.{}.enabled='1'",
-            service.name
-        ))?;
+        self.shell
+            .execute(&format!("uci set ddns.{}=service", service.name))?;
+        self.shell
+            .execute(&format!("uci set ddns.{}.enabled='1'", service.name))?;
         self.shell.execute(&format!(
             "uci set ddns.{}.service_name='{}'",
             service.name, service.service_name
@@ -231,26 +221,18 @@ impl DDNSManager {
             "uci set ddns.{}.lookup_host='{}'",
             service.name, service.domain
         ))?;
-        self.shell.execute(&format!(
-            "uci set ddns.{}.use_https='0'",
-            service.name
-        ))?;
-        self.shell.execute(&format!(
-            "uci set ddns.{}.ip_source='web'",
-            service.name
-        ))?;
+        self.shell
+            .execute(&format!("uci set ddns.{}.use_https='0'", service.name))?;
+        self.shell
+            .execute(&format!("uci set ddns.{}.ip_source='web'", service.name))?;
         self.shell.execute(&format!(
             "uci set ddns.{}.check_unit='minutes'",
             service.name
         ))?;
-        self.shell.execute(&format!(
-            "uci set ddns.{}.force_unit='hours'",
-            service.name
-        ))?;
-        self.shell.execute(&format!(
-            "uci set ddns.{}.interface='wan'",
-            service.name
-        ))?;
+        self.shell
+            .execute(&format!("uci set ddns.{}.force_unit='hours'", service.name))?;
+        self.shell
+            .execute(&format!("uci set ddns.{}.interface='wan'", service.name))?;
 
         self.shell.execute("uci commit ddns")?;
 
@@ -266,8 +248,7 @@ impl DDNSManager {
 
     /// Remove a DDNS service
     pub fn remove_service(&mut self, service_name: &str) -> Result<()> {
-        self.logger
-            .info(&format!("删除DDNS服务: {}", service_name));
+        self.logger.info(&format!("删除DDNS服务: {}", service_name));
 
         self.shell
             .execute(&format!("uci delete ddns.{}", service_name))?;
@@ -334,8 +315,7 @@ impl DDNSManager {
 
     /// Update a DDNS service
     pub fn update_service(&self, service_name: &str) -> Result<()> {
-        self.logger
-            .info(&format!("更新DDNS服务: {}", service_name));
+        self.logger.info(&format!("更新DDNS服务: {}", service_name));
 
         self.shell.execute(&format!(
             "/usr/lib/ddns/dynamic_dns_updater.sh -S {} start",

@@ -82,6 +82,7 @@ pub struct FirewallConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct CoreConfig {
     #[serde(default)]
     pub crashcore: String,
@@ -175,22 +176,12 @@ impl Default for FirewallConfig {
     }
 }
 
-impl Default for CoreConfig {
-    fn default() -> Self {
-        Self {
-            crashcore: String::new(),
-            core_v: String::new(),
-            target: String::new(),
-        }
-    }
-}
 
 impl Config {
     /// Load configuration from file
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let content = fs::read_to_string(path.as_ref()).map_err(|e| {
-            ShellCrashError::ConfigError(format!("无法读取配置文件: {}", e))
-        })?;
+        let content = fs::read_to_string(path.as_ref())
+            .map_err(|e| ShellCrashError::ConfigError(format!("无法读取配置文件: {}", e)))?;
 
         // Try to parse as different formats
         if let Ok(config) = toml::from_str::<Config>(&content) {
@@ -221,10 +212,16 @@ impl Config {
                 let value = value.trim().trim_matches('\'').trim_matches('"');
 
                 match key {
-                    "mix_port" => config.ports.mix_port = value.parse().unwrap_or(default_mix_port()),
-                    "redir_port" => config.ports.redir_port = value.parse().unwrap_or(default_redir_port()),
+                    "mix_port" => {
+                        config.ports.mix_port = value.parse().unwrap_or(default_mix_port())
+                    }
+                    "redir_port" => {
+                        config.ports.redir_port = value.parse().unwrap_or(default_redir_port())
+                    }
                     "db_port" => config.ports.db_port = value.parse().unwrap_or(default_db_port()),
-                    "dns_port" => config.ports.dns_port = value.parse().unwrap_or(default_dns_port()),
+                    "dns_port" => {
+                        config.ports.dns_port = value.parse().unwrap_or(default_dns_port())
+                    }
                     "crashcore" => config.core.crashcore = value.to_string(),
                     "core_v" => config.core.core_v = value.to_string(),
                     "redir_mod" => config.firewall.redir_mod = value.to_string(),
@@ -258,9 +255,8 @@ impl Config {
             content.push_str(&format!("{}={}\n", key, value));
         }
 
-        fs::write(path.as_ref(), content).map_err(|e| {
-            ShellCrashError::ConfigError(format!("无法写入配置文件: {}", e))
-        })?;
+        fs::write(path.as_ref(), content)
+            .map_err(|e| ShellCrashError::ConfigError(format!("无法写入配置文件: {}", e)))?;
 
         Ok(())
     }

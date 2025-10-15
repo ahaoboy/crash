@@ -1,7 +1,7 @@
 // Shell command executor
 
-use crate::common::Result;
 use crate::ShellCrashError;
+use crate::common::Result;
 use anyhow::Context;
 use std::process::{Command, Output, Stdio};
 use std::time::Duration;
@@ -67,8 +67,6 @@ impl ShellExecutor {
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
     }
 
-
-
     /// Check if a command exists in PATH
     pub fn check_command_exists(&self, command: &str) -> bool {
         #[cfg(target_os = "windows")]
@@ -113,10 +111,7 @@ impl ShellExecutor {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(ShellCrashError::ShellError(format!(
-                "命令执行失败: {}",
-                stderr
-            )).into());
+            return Err(ShellCrashError::ShellError(format!("命令执行失败: {}", stderr)).into());
         }
 
         Ok(output)

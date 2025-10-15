@@ -1,7 +1,7 @@
 // Menu system - corresponds to scripts/menu.sh
 
-use crate::common::{Config, Logger, Result, ShellCrashError, ShellExecutor};
 use crate::common::i18n::t;
+use crate::common::{Config, Logger, Result, ShellCrashError, ShellExecutor};
 use crate::scripts::init::VERSION;
 use dialoguer::{Input, Select};
 use std::time::Duration;
@@ -127,12 +127,27 @@ impl MenuSystem {
     /// Display current status
     fn display_status(&self) -> Result<()> {
         println!("-----------------------------------------------");
-        println!("\x1b[30;46m{}\x1b[0m\t\t{}: {}", t("welcome"), t("version"), VERSION);
+        println!(
+            "\x1b[30;46m{}\x1b[0m\t\t{}: {}",
+            t("welcome"),
+            t("version"),
+            VERSION
+        );
 
         let status = self.check_status();
         match status {
-            ServiceStatus::Running { pid, uptime, memory, mode } => {
-                println!("{} \x1b[32m{}（{}）\x1b[0m", t("service_status"), t("service_running"), mode);
+            ServiceStatus::Running {
+                pid,
+                uptime,
+                memory,
+                mode,
+            } => {
+                println!(
+                    "{} \x1b[32m{}（{}）\x1b[0m",
+                    t("service_status"),
+                    t("service_running"),
+                    mode
+                );
                 println!(
                     "{}: \x1b[44m{:.2} MB\x1b[0m，{}: \x1b[46;30m{:?}\x1b[0m",
                     t("memory_usage"),
@@ -142,10 +157,19 @@ impl MenuSystem {
                 );
             }
             ServiceStatus::Stopped => {
-                println!("{}: \x1b[31m{}\x1b[0m", t("service_status"), t("service_stopped"));
+                println!(
+                    "{}: \x1b[31m{}\x1b[0m",
+                    t("service_status"),
+                    t("service_stopped")
+                );
             }
             ServiceStatus::Error(e) => {
-                println!("{}: \x1b[31m{} - {}\x1b[0m", t("service_status"), t("error"), e);
+                println!(
+                    "{}: \x1b[31m{} - {}\x1b[0m",
+                    t("service_status"),
+                    t("error"),
+                    e
+                );
             }
         }
 
@@ -157,7 +181,7 @@ impl MenuSystem {
 
     /// Switch language
     fn switch_language(&self) -> Result<()> {
-        use crate::common::{get_language, set_language, Language};
+        use crate::common::{Language, get_language, set_language};
 
         let current = get_language();
         let current_name = match current {
@@ -169,10 +193,7 @@ impl MenuSystem {
         println!("{}: {}", t("current_language"), current_name);
         println!("-----------------------------------------------");
 
-        let options = vec![
-            "English",
-            "中文 (Chinese)",
-        ];
+        let options = vec!["English", "中文 (Chinese)"];
 
         let selection = Select::new()
             .with_prompt(t("prompt_select"))
@@ -209,13 +230,26 @@ impl MenuSystem {
         // Try to get PID of CrashCore
         if let Ok(output) = self.shell.execute("pidof CrashCore") {
             let pid_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if let Ok(pid) = pid_str.split_whitespace().last().unwrap_or("").parse::<u32>() {
+            if let Ok(pid) = pid_str
+                .split_whitespace()
+                .last()
+                .unwrap_or("")
+                .parse::<u32>()
+            {
                 // Get memory usage
                 let memory = self
                     .shell
-                    .execute(&format!("cat /proc/{}/status | grep VmRSS | awk '{{print $2}}'", pid))
+                    .execute(&format!(
+                        "cat /proc/{}/status | grep VmRSS | awk '{{print $2}}'",
+                        pid
+                    ))
                     .ok()
-                    .and_then(|o| String::from_utf8_lossy(&o.stdout).trim().parse::<u64>().ok())
+                    .and_then(|o| {
+                        String::from_utf8_lossy(&o.stdout)
+                            .trim()
+                            .parse::<u64>()
+                            .ok()
+                    })
                     .unwrap_or(0);
 
                 // Get uptime
@@ -239,10 +273,26 @@ impl MenuSystem {
         println!("-----------------------------------------------");
         println!("{}", t("port_config"));
         println!("-----------------------------------------------");
-        println!(" 1 {}:\t\x1b[36m{}\x1b[0m", t("modify_http_port"), self.config.ports.mix_port);
-        println!(" 2 {}:\t\x1b[36m{}\x1b[0m", t("modify_redir_port"), self.config.ports.redir_port);
-        println!(" 3 {}:\t\x1b[36m{}\x1b[0m", t("modify_dns_port"), self.config.ports.dns_port);
-        println!(" 4 {}:\t\x1b[36m{}\x1b[0m", t("modify_panel_port"), self.config.ports.db_port);
+        println!(
+            " 1 {}:\t\x1b[36m{}\x1b[0m",
+            t("modify_http_port"),
+            self.config.ports.mix_port
+        );
+        println!(
+            " 2 {}:\t\x1b[36m{}\x1b[0m",
+            t("modify_redir_port"),
+            self.config.ports.redir_port
+        );
+        println!(
+            " 3 {}:\t\x1b[36m{}\x1b[0m",
+            t("modify_dns_port"),
+            self.config.ports.dns_port
+        );
+        println!(
+            " 4 {}:\t\x1b[36m{}\x1b[0m",
+            t("modify_panel_port"),
+            self.config.ports.db_port
+        );
         println!(" 0 {}", t("return_menu"));
 
         let choice: String = Input::new()
@@ -264,12 +314,12 @@ impl MenuSystem {
 
     fn set_port(&self, port_name: &str, display_name: &str) -> Result<()> {
         let port: String = Input::new()
-            .with_prompt(&format!("请输入{}(1-65535)", display_name))
+            .with_prompt(format!("请输入{}(1-65535)", display_name))
             .interact_text()
             .map_err(|e| ShellCrashError::Unknown(e.to_string()))?;
 
-        if let Ok(port_num) = port.parse::<u16>() {
-            if port_num > 0 {
+        if let Ok(port_num) = port.parse::<u16>()
+            && port_num > 0 {
                 // Update config and save
                 let mut config = self.config.clone();
                 config.set_value(port_name, &port_num.to_string())?;
@@ -277,10 +327,10 @@ impl MenuSystem {
                 let config_file = self.config.crash_dir.join("configs/ShellCrash.cfg");
                 config.save(&config_file)?;
 
-                self.logger.info(&format!("{}设置为: {}", display_name, port_num));
+                self.logger
+                    .info(&format!("{}设置为: {}", display_name, port_num));
                 return Ok(());
             }
-        }
 
         Err(ShellCrashError::ConfigError("无效的端口号".to_string()).into())
     }
@@ -290,8 +340,14 @@ impl MenuSystem {
         println!("-----------------------------------------------");
         println!("DNS配置");
         println!("-----------------------------------------------");
-        println!("当前基础DNS：\x1b[32m{}\x1b[0m", self.config.dns.nameserver.join(", "));
-        println!("PROXY-DNS：\x1b[36m{}\x1b[0m", self.config.dns.fallback.join(", "));
+        println!(
+            "当前基础DNS：\x1b[32m{}\x1b[0m",
+            self.config.dns.nameserver.join(", ")
+        );
+        println!(
+            "PROXY-DNS：\x1b[36m{}\x1b[0m",
+            self.config.dns.fallback.join(", ")
+        );
         println!(" 1 修改基础DNS");
         println!(" 2 修改PROXY-DNS");
         println!(" 3 重置默认DNS配置");
@@ -344,7 +400,10 @@ impl MenuSystem {
         println!("-----------------------------------------------");
         println!("IPv6配置");
         println!("-----------------------------------------------");
-        println!(" 1 ipv6透明代理: \x1b[36m{}\x1b[0m", self.config.firewall.ipv6_redir);
+        println!(
+            " 1 ipv6透明代理: \x1b[36m{}\x1b[0m",
+            self.config.firewall.ipv6_redir
+        );
         println!(" 0 返回上级菜单");
 
         let choice: String = Input::new()
@@ -594,15 +653,14 @@ impl MenuSystem {
     /// Get service uptime
     fn get_uptime(&self) -> Duration {
         let start_time_file = self.config.tmp_dir.join("crash_start_time");
-        if let Ok(content) = std::fs::read_to_string(start_time_file) {
-            if let Ok(start_time) = content.trim().parse::<u64>() {
+        if let Ok(content) = std::fs::read_to_string(start_time_file)
+            && let Ok(start_time) = content.trim().parse::<u64>() {
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
                     .as_secs();
                 return Duration::from_secs(now - start_time);
             }
-        }
         Duration::from_secs(0)
     }
 }

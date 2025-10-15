@@ -23,11 +23,11 @@ pub struct Task {
 
 #[derive(Debug, Clone)]
 pub enum TaskType {
-    Cron(String),       // Cron expression
-    BeforeStart,        // Run before service starts
-    AfterStart,         // Run after service starts
-    Running(String),    // Run while service is running
-    AfterFirewall,      // Run after firewall setup
+    Cron(String),    // Cron expression
+    BeforeStart,     // Run before service starts
+    AfterStart,      // Run after service starts
+    Running(String), // Run while service is running
+    AfterFirewall,   // Run after firewall setup
 }
 
 impl TaskManager {
@@ -104,8 +104,8 @@ impl TaskManager {
                 }
 
                 let parts: Vec<&str> = line.split('#').collect();
-                if parts.len() >= 3 {
-                    if let Ok(id) = parts[0].trim().parse::<u32>() {
+                if parts.len() >= 3
+                    && let Ok(id) = parts[0].trim().parse::<u32>() {
                         tasks.push(Task {
                             id,
                             command: parts[1].trim().to_string(),
@@ -114,7 +114,6 @@ impl TaskManager {
                             description: String::new(),
                         });
                     }
-                }
             }
         }
 
@@ -127,8 +126,8 @@ impl TaskManager {
                 }
 
                 let parts: Vec<&str> = line.split('#').collect();
-                if parts.len() >= 3 {
-                    if let Ok(id) = parts[0].trim().parse::<u32>() {
+                if parts.len() >= 3
+                    && let Ok(id) = parts[0].trim().parse::<u32>() {
                         tasks.push(Task {
                             id,
                             command: parts[1].trim().to_string(),
@@ -137,7 +136,6 @@ impl TaskManager {
                             description: String::new(),
                         });
                     }
-                }
             }
         }
 
@@ -282,9 +280,7 @@ impl TaskManager {
                 format!("* */{} * * *", hours)
             }
         } else {
-            return Err(ShellCrashError::ConfigError(
-                "无效的时间间隔".to_string(),
-            ).into());
+            return Err(ShellCrashError::ConfigError("无效的时间间隔".to_string()).into());
         };
 
         self.add_service_task(task, "running")?;

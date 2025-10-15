@@ -3,7 +3,6 @@
 use crate::common::{Config, Logger, Result, ShellCrashError, ShellExecutor};
 use crate::scripts::menu::ServiceStatus;
 use std::fs;
-use std::path::Path;
 use std::time::Duration;
 
 pub struct ServiceManager {
@@ -89,7 +88,12 @@ impl ServiceManager {
     pub fn get_status(&self) -> ServiceStatus {
         if let Ok(output) = self.shell.execute("pidof CrashCore") {
             let pid_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if let Ok(pid) = pid_str.split_whitespace().last().unwrap_or("").parse::<u32>() {
+            if let Ok(pid) = pid_str
+                .split_whitespace()
+                .last()
+                .unwrap_or("")
+                .parse::<u32>()
+            {
                 let memory = self
                     .shell
                     .execute(&format!(
@@ -136,9 +140,7 @@ impl ServiceManager {
                     tmp_dir.display()
                 ))?;
             } else {
-                return Err(ShellCrashError::PathNotFound(
-                    "找不到内核文件".to_string(),
-                ).into());
+                return Err(ShellCrashError::PathNotFound("找不到内核文件".to_string()).into());
             }
         }
 
@@ -161,9 +163,7 @@ impl ServiceManager {
         };
 
         if !config_file.exists() {
-            return Err(ShellCrashError::ConfigError(
-                "找不到配置文件".to_string(),
-            ).into());
+            return Err(ShellCrashError::ConfigError("找不到配置文件".to_string()).into());
         }
 
         Ok(())
@@ -290,15 +290,14 @@ impl ServiceManager {
 
     fn get_uptime(&self) -> Duration {
         let start_time_file = self.config.tmp_dir.join("crash_start_time");
-        if let Ok(content) = fs::read_to_string(start_time_file) {
-            if let Ok(start_time) = content.trim().parse::<u64>() {
+        if let Ok(content) = fs::read_to_string(start_time_file)
+            && let Ok(start_time) = content.trim().parse::<u64>() {
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
                     .as_secs();
                 return Duration::from_secs(now - start_time);
             }
-        }
         Duration::from_secs(0)
     }
 }

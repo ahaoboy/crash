@@ -2,12 +2,10 @@
 // Copyright (C) Rust Port
 
 use clap::{Parser, Subcommand};
-use shellcrash_rs::{Config, Result};
-use std::path::PathBuf;
+use crash::Config;
+use std::{path::PathBuf, str::FromStr};
 
 // Re-export for convenience
-use shellcrash_rs::scripts;
-use shellcrash_rs::tools;
 
 #[derive(Parser)]
 #[command(name = "shellcrash")]
@@ -91,11 +89,10 @@ fn main() -> anyhow::Result<()> {
     // Load language preference
     if let Some(config_dir) = dirs::config_dir() {
         let lang_file = config_dir.join("shellcrash").join("language");
-        if let Ok(lang_code) = std::fs::read_to_string(&lang_file) {
-            if let Some(lang) = shellcrash_rs::common::Language::from_str(lang_code.trim()) {
-                shellcrash_rs::common::set_language(lang);
+        if let Ok(lang_code) = std::fs::read_to_string(&lang_file)
+            && let Ok(lang) = crash::common::Language::from_str(lang_code.trim()) {
+                crash::common::set_language(lang);
             }
-        }
     }
 
     let cli = Cli::parse();
@@ -125,7 +122,7 @@ fn main() -> anyhow::Result<()> {
     // Handle commands
     match cli.command {
         Some(Commands::Init) => {
-            use shellcrash_rs::scripts::InitManager;
+            use crash::scripts::InitManager;
 
             println!("初始化 ShellCrash...");
             let mut init_manager = InitManager::new(config.clone());
@@ -147,54 +144,59 @@ fn main() -> anyhow::Result<()> {
             Ok(())
         }
         Some(Commands::Menu) => {
-            use shellcrash_rs::scripts::MenuSystem;
+            use crash::scripts::MenuSystem;
 
             let menu = MenuSystem::new(config);
             menu.show_main_menu()
         }
         Some(Commands::Start) => {
-            use shellcrash_rs::scripts::ServiceManager;
+            use crash::scripts::ServiceManager;
 
             let service = ServiceManager::new(config);
             service.start()
         }
         Some(Commands::Stop) => {
-            use shellcrash_rs::scripts::ServiceManager;
+            use crash::scripts::ServiceManager;
 
             let service = ServiceManager::new(config);
             service.stop()
         }
         Some(Commands::Restart) => {
-            use shellcrash_rs::scripts::ServiceManager;
+            use crash::scripts::ServiceManager;
 
             let service = ServiceManager::new(config);
             service.restart()
         }
         Some(Commands::Status) => {
-            use shellcrash_rs::scripts::ServiceManager;
+            use crash::scripts::ServiceManager;
 
             let service = ServiceManager::new(config);
             let status = service.get_status();
 
             match status {
-                shellcrash_rs::scripts::menu::ServiceStatus::Running { pid, uptime, memory, mode } => {
+                crash::scripts::menu::ServiceStatus::Running {
+                    pid,
+                    uptime,
+                    memory,
+                    mode,
+                } => {
                     println!("服务状态: \x1b[32m运行中\x1b[0m");
                     println!("PID: {}", pid);
                     println!("运行模式: {}", mode);
                     println!("内存使用: {:.2} MB", memory as f64 / 1024.0);
                     println!("运行时长: {:?}", uptime);
                 }
-                shellcrash_rs::scripts::menu::ServiceStatus::Stopped => {
+                crash::scripts::menu::ServiceStatus::Stopped => {
                     println!("服务状态: \x1b[31m已停止\x1b[0m");
                 }
-                shellcrash_rs::scripts::menu::ServiceStatus::Error(e) => {
+                crash::scripts::menu::ServiceStatus::Error(e) => {
                     println!("服务状态: \x1b[31m错误 - {}\x1b[0m", e);
                 }
             }
             Ok(())
         }
         Some(Commands::Task { action }) => {
-            use shellcrash_rs::scripts::TaskManager;
+            use crash::scripts::TaskManager;
 
             let mut task_manager = TaskManager::new(config);
 
@@ -222,7 +224,7 @@ fn main() -> anyhow::Result<()> {
             }
         }
         Some(Commands::Ddns { action }) => {
-            use shellcrash_rs::tools::DDNSManager;
+            use crash::tools::DDNSManager;
 
             let mut ddns_manager = DDNSManager::new(config);
 
@@ -234,7 +236,10 @@ fn main() -> anyhow::Result<()> {
                     } else {
                         println!("DDNS 服务列表:");
                         for service in services {
-                            println!(" {} - {} ({})", service.name, service.domain, service.service_name);
+                            println!(
+                                " {} - {} ({})",
+                                service.name, service.domain, service.service_name
+                            );
                         }
                     }
                     Ok(())
@@ -250,9 +255,9 @@ fn main() -> anyhow::Result<()> {
             }
         }
         Some(Commands::Lang { language }) => {
-            use shellcrash_rs::common::{Language, set_language};
+            use crash::common::{Language, set_language};
 
-            if let Some(lang) = Language::from_str(&language) {
+            if let Ok(lang) = Language::from_str(&language) {
                 set_language(lang);
 
                 // Save language preference to config
@@ -276,7 +281,7 @@ fn main() -> anyhow::Result<()> {
             Ok(())
         }
         None => {
-            use shellcrash_rs::scripts::MenuSystem;
+            use crash::scripts::MenuSystem;
 
             // Default: show menu
             let menu = MenuSystem::new(config);

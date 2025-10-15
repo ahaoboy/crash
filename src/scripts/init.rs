@@ -65,16 +65,14 @@ impl InitManager {
             return Err(ShellCrashError::PermissionDenied(format!(
                 "没有{}目录写入权限！",
                 dir.display()
-            )).into());
+            ))
+            .into());
         }
 
         // Get available space
         let space = self.get_available_space(&dir)?;
-        self.logger.info(&format!(
-            "目标目录 {} 空间剩余：{}",
-            dir.display(),
-            space
-        ));
+        self.logger
+            .info(&format!("目标目录 {} 空间剩余：{}", dir.display(), space));
 
         // Confirm installation
         let confirm: String = Input::new()
@@ -92,10 +90,8 @@ impl InitManager {
     }
 
     fn select_mi_directory(&self) -> Result<PathBuf> {
-        self.logger.log_colored(
-            "检测到当前设备为小米官方系统，请选择安装位置",
-            33,
-        );
+        self.logger
+            .log_colored("检测到当前设备为小米官方系统，请选择安装位置", 33);
 
         let mut options = Vec::new();
         if self.get_available_space_mb(&PathBuf::from("/data"))? > 256 {
@@ -122,10 +118,8 @@ impl InitManager {
     }
 
     fn select_asus_directory(&self) -> Result<PathBuf> {
-        self.logger.log_colored(
-            "检测到当前设备为华硕固件，请选择安装方式",
-            33,
-        );
+        self.logger
+            .log_colored("检测到当前设备为华硕固件，请选择安装方式", 33);
 
         let options = vec![
             "基于USB设备安装(限23年9月之前固件，须插入任意USB设备)",
@@ -151,10 +145,8 @@ impl InitManager {
     }
 
     fn select_generic_directory(&self) -> Result<PathBuf> {
-        self.logger.log_colored(
-            "安装ShellCrash至少需要预留约1MB的磁盘空间",
-            33,
-        );
+        self.logger
+            .log_colored("安装ShellCrash至少需要预留约1MB的磁盘空间", 33);
 
         let options = vec![
             "在 /etc 目录下安装(适合root用户)",
@@ -187,7 +179,9 @@ impl InitManager {
 
     fn select_usb_directory(&self) -> Result<PathBuf> {
         // List available mount points
-        let output = self.shell.execute("du -hL /mnt 2>/dev/null || du -hL /tmp/mnt 2>/dev/null")?;
+        let output = self
+            .shell
+            .execute("du -hL /mnt 2>/dev/null || du -hL /tmp/mnt 2>/dev/null")?;
         let mounts = String::from_utf8_lossy(&output.stdout);
 
         println!("可用挂载点：");
@@ -205,7 +199,9 @@ impl InitManager {
         println!("-----------------------------------------------");
         println!("可用路径 剩余空间:");
         let _ = self.shell.execute("df -h | awk '{print $6,$4}' | sed 1d");
-        println!("路径是必须带 / 的格式，注意写入虚拟内存(/tmp,/opt,/sys...)的文件会在重启后消失！！！");
+        println!(
+            "路径是必须带 / 的格式，注意写入虚拟内存(/tmp,/opt,/sys...)的文件会在重启后消失！！！"
+        );
 
         let path: String = Input::new()
             .with_prompt("请输入自定义路径")
@@ -213,7 +209,11 @@ impl InitManager {
             .map_err(|e| ShellCrashError::Unknown(e.to_string()))?;
 
         let path = PathBuf::from(path);
-        if !path.exists() || path.to_str().map_or(false, |s| s.contains("tmp") || s.contains("opt") || s.contains("sys")) {
+        if !path.exists()
+            || path.to_str().is_some_and(|s| {
+                s.contains("tmp") || s.contains("opt") || s.contains("sys")
+            })
+        {
             self.logger.error("路径错误！请重新设置！");
             return self.select_custom_directory();
         }
@@ -292,13 +292,23 @@ impl InitManager {
             // Remove old aliases
             let mut lines: Vec<String> = content
                 .lines()
-                .filter(|l| !l.contains("alias crash=") && !l.contains("alias clash=") && !l.contains("export CRASHDIR="))
+                .filter(|l| {
+                    !l.contains("alias crash=")
+                        && !l.contains("alias clash=")
+                        && !l.contains("export CRASHDIR=")
+                })
                 .map(|s| s.to_string())
                 .collect();
 
             // Add new aliases
-            lines.push(format!("alias crash=\"{} {}/menu.sh\"", shell_type, crash_dir_str));
-            lines.push(format!("alias clash=\"{} {}/menu.sh\"", shell_type, crash_dir_str));
+            lines.push(format!(
+                "alias crash=\"{} {}/menu.sh\"",
+                shell_type, crash_dir_str
+            ));
+            lines.push(format!(
+                "alias clash=\"{} {}/menu.sh\"",
+                shell_type, crash_dir_str
+            ));
             lines.push(format!("export CRASHDIR=\"{}\"", crash_dir_str));
 
             fs::write(&profile_path, lines.join("\n"))?;
@@ -309,8 +319,11 @@ impl InitManager {
 
         // Create /usr/bin/crash if possible
         let crash_bin = PathBuf::from("/usr/bin/crash");
-        if self.check_write_permission(&crash_bin.parent().unwrap_or(Path::new("/"))) {
-            let content = format!("#!/bin/{}\n{}/menu.sh $1 $2 $3 $4 $5\n", shell_type, crash_dir_str);
+        if self.check_write_permission(crash_bin.parent().unwrap_or(Path::new("/"))) {
+            let content = format!(
+                "#!/bin/{}\n{}/menu.sh $1 $2 $3 $4 $5\n",
+                shell_type, crash_dir_str
+            );
             fs::write(&crash_bin, content)?;
             #[cfg(unix)]
             {
@@ -343,23 +356,28 @@ impl InitManager {
 
     // Helper methods
     fn check_write_permission(&self, path: &Path) -> bool {
-        if let Some(parent) = path.parent() {
-            if parent.exists() {
+        if let Some(parent) = path.parent()
+            && parent.exists() {
                 return fs::metadata(parent)
                     .map(|m| !m.permissions().readonly())
                     .unwrap_or(false);
             }
-        }
         false
     }
 
     fn get_available_space(&self, path: &Path) -> Result<String> {
-        let output = self.shell.execute(&format!("df -h {} | tail -1 | awk '{{print $4}}'", path.display()))?;
+        let output = self.shell.execute(&format!(
+            "df -h {} | tail -1 | awk '{{print $4}}'",
+            path.display()
+        ))?;
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
     }
 
     fn get_available_space_mb(&self, path: &Path) -> Result<u64> {
-        let output = self.shell.execute(&format!("df {} | tail -1 | awk '{{print $4}}'", path.display()))?;
+        let output = self.shell.execute(&format!(
+            "df {} | tail -1 | awk '{{print $4}}'",
+            path.display()
+        ))?;
         let space_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
         Ok(space_str.parse().unwrap_or(0) / 1024)
     }

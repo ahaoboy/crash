@@ -32,24 +32,16 @@ impl Downloader {
     pub fn download_file(&self, url: &str, dest: &Path) -> Result<()> {
         self.logger.info(&format!("下载文件: {}", url));
 
-        let response = self
-            .client
-            .get(url)
-            .send()
-            .context("发送HTTP请求失败")?;
+        let response = self.client.get(url).send().context("发送HTTP请求失败")?;
 
         if !response.status().is_success() {
             anyhow::bail!("HTTP请求失败: {}", response.status());
         }
 
-        let bytes = response
-            .bytes()
-            .context("读取响应数据失败")?;
+        let bytes = response.bytes().context("读取响应数据失败")?;
 
-        let mut file = File::create(dest)
-            .context(format!("创建文件失败: {}", dest.display()))?;
-        file.write_all(&bytes)
-            .context("写入文件失败")?;
+        let mut file = File::create(dest).context(format!("创建文件失败: {}", dest.display()))?;
+        file.write_all(&bytes).context("写入文件失败")?;
 
         self.logger.info("下载完成");
         Ok(())
@@ -59,11 +51,7 @@ impl Downloader {
     pub fn download_with_progress(&self, url: &str, dest: &Path) -> Result<()> {
         self.logger.info(&format!("下载文件: {}", url));
 
-        let response = self
-            .client
-            .get(url)
-            .send()
-            .context("发送HTTP请求失败")?;
+        let response = self.client.get(url).send().context("发送HTTP请求失败")?;
 
         if !response.status().is_success() {
             anyhow::bail!("HTTP请求失败: {}", response.status());
@@ -79,19 +67,16 @@ impl Downloader {
                 .progress_chars("#>-"),
         );
 
-        let mut file = File::create(dest)
-            .context(format!("创建文件失败: {}", dest.display()))?;
+        let mut file = File::create(dest).context(format!("创建文件失败: {}", dest.display()))?;
         let mut downloaded = 0u64;
 
         // Read response in chunks
-        let bytes = response.bytes()
-            .context("读取响应数据失败")?;
+        let bytes = response.bytes().context("读取响应数据失败")?;
 
         // Write in chunks to show progress
         let chunk_size = 8192;
         for chunk in bytes.chunks(chunk_size) {
-            file.write_all(chunk)
-                .context("写入文件失败")?;
+            file.write_all(chunk).context("写入文件失败")?;
             downloaded += chunk.len() as u64;
             pb.set_position(downloaded);
         }
@@ -104,19 +89,13 @@ impl Downloader {
     pub fn get_core_config(&self, url: &str) -> Result<String> {
         self.logger.info(&format!("获取配置: {}", url));
 
-        let response = self
-            .client
-            .get(url)
-            .send()
-            .context("发送HTTP请求失败")?;
+        let response = self.client.get(url).send().context("发送HTTP请求失败")?;
 
         if !response.status().is_success() {
             anyhow::bail!("HTTP请求失败: {}", response.status());
         }
 
-        let text = response
-            .text()
-            .context("读取响应文本失败")?;
+        let text = response.text().context("读取响应文本失败")?;
 
         Ok(text)
     }
@@ -128,8 +107,7 @@ impl Downloader {
         target: &str,
         rule_link: Option<&str>,
     ) -> Result<String> {
-        self.logger
-            .info("正在连接服务器获取配置文件...");
+        self.logger.info("正在连接服务器获取配置文件...");
 
         // Get server list
         let servers_file = self.config.crash_dir.join("configs/servers.list");
@@ -165,8 +143,7 @@ impl Downloader {
             conversion_url.push_str(&format!("&config={}", urlencoding::encode(rule_url)));
         }
 
-        self.logger
-            .info(&format!("链接地址: {}", conversion_url));
+        self.logger.info(&format!("链接地址: {}", conversion_url));
 
         // Download configuration
         let config_text = self.get_core_config(&conversion_url)?;
@@ -192,7 +169,10 @@ impl Downloader {
             .map(|s| s.as_str())
             .unwrap_or("https://fastly.jsdelivr.net/gh/juewuy/ShellCrash@master");
 
-        let core_url = format!("{}/bin/{}/clash-linux-{}.tar.gz", update_url, core_type, arch);
+        let core_url = format!(
+            "{}/bin/{}/clash-linux-{}.tar.gz",
+            update_url, core_type, arch
+        );
 
         let tmp_file = self.config.tmp_dir.join("core_new.tar.gz");
         self.download_with_progress(&core_url, &tmp_file)?;
@@ -290,8 +270,7 @@ impl Downloader {
             self.config.crash_dir.join("yamls/config.yaml")
         };
 
-        std::fs::write(&config_file, config_text)
-            .context("保存配置文件失败")?;
+        std::fs::write(&config_file, config_text).context("保存配置文件失败")?;
 
         self.logger.info("订阅更新完成");
         Ok(())
@@ -341,16 +320,15 @@ impl Downloader {
 
         // Extract
         self.logger.info("解压脚本文件...");
-        let tar_gz = File::open(&tmp_file)
-            .context("打开压缩文件失败")?;
+        let tar_gz = File::open(&tmp_file).context("打开压缩文件失败")?;
         let tar = flate2::read::GzDecoder::new(tar_gz);
         let mut archive = tar::Archive::new(tar);
-        archive.unpack(&self.config.crash_dir)
+        archive
+            .unpack(&self.config.crash_dir)
             .context("解压文件失败")?;
 
         // Clean up
-        std::fs::remove_file(tmp_file)
-            .context("删除临时文件失败")?;
+        std::fs::remove_file(tmp_file).context("删除临时文件失败")?;
 
         self.logger.info("脚本更新完成");
         Ok(())
@@ -373,12 +351,10 @@ impl Downloader {
 
         for db in databases {
             let db_path = self.config.crash_dir.join(db);
-            if db_path.exists() {
-                if let Err(e) = self.download_geoip(db) {
-                    self.logger
-                        .warn(&format!("更新 {} 失败: {}", db, e));
+            if db_path.exists()
+                && let Err(e) = self.download_geoip(db) {
+                    self.logger.warn(&format!("更新 {} 失败: {}", db, e));
                 }
-            }
         }
 
         self.logger.info("GeoIP 数据库更新完成");
