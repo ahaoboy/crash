@@ -81,8 +81,7 @@ pub struct FirewallConfig {
     pub redir_mod: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CoreConfig {
     #[serde(default)]
     pub crashcore: String,
@@ -96,7 +95,7 @@ pub struct CoreConfig {
 
 // Default value functions
 fn default_version() -> String {
-    "1.9.2".to_string()
+    env!("CARGO_PKG_VERSION").to_string()
 }
 
 fn default_tmp_dir() -> PathBuf {
@@ -175,7 +174,6 @@ impl Default for FirewallConfig {
         }
     }
 }
-
 
 impl Config {
     /// Load configuration from file

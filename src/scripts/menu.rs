@@ -136,10 +136,11 @@ impl MenuSystem {
         let status = self.check_status();
         match status {
             ServiceStatus::Running {
-                pid,
+                // pid,
                 uptime,
                 memory,
                 mode,
+                ..
             } => {
                 println!(
                     "{} \x1b[32m{}（{}）\x1b[0m",
