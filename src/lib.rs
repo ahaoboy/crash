@@ -4,6 +4,8 @@
 pub mod common;
 pub mod scripts;
 pub mod tools;
+pub mod core;
+
 
 // Re-export commonly used types
 pub use common::{
