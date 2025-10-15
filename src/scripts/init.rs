@@ -5,8 +5,6 @@ use dialoguer::{Input, Select};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub const VERSION: &str = "1.9.2beta4";
-
 pub struct InitManager {
     pub config: Config,
     shell: ShellExecutor,

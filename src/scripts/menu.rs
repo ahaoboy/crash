@@ -2,7 +2,6 @@
 
 use crate::common::i18n::t;
 use crate::common::{Config, Logger, Result, ShellCrashError, ShellExecutor};
-use crate::scripts::init::VERSION;
 use dialoguer::{Input, Select};
 use std::time::Duration;
 
@@ -131,7 +130,7 @@ impl MenuSystem {
             "\x1b[30;46m{}\x1b[0m\t\t{}: {}",
             t("welcome"),
             t("version"),
-            VERSION
+            env!("CARGO_PKG_VERSION")
         );
 
         let status = self.check_status();
@@ -319,18 +318,19 @@ impl MenuSystem {
             .map_err(|e| ShellCrashError::Unknown(e.to_string()))?;
 
         if let Ok(port_num) = port.parse::<u16>()
-            && port_num > 0 {
-                // Update config and save
-                let mut config = self.config.clone();
-                config.set_value(port_name, &port_num.to_string())?;
+            && port_num > 0
+        {
+            // Update config and save
+            let mut config = self.config.clone();
+            config.set_value(port_name, &port_num.to_string())?;
 
-                let config_file = self.config.crash_dir.join("configs/ShellCrash.cfg");
-                config.save(&config_file)?;
+            let config_file = self.config.crash_dir.join("configs/ShellCrash.cfg");
+            config.save(&config_file)?;
 
-                self.logger
-                    .info(&format!("{}设置为: {}", display_name, port_num));
-                return Ok(());
-            }
+            self.logger
+                .info(&format!("{}设置为: {}", display_name, port_num));
+            return Ok(());
+        }
 
         Err(ShellCrashError::ConfigError("无效的端口号".to_string()).into())
     }
@@ -654,13 +654,14 @@ impl MenuSystem {
     fn get_uptime(&self) -> Duration {
         let start_time_file = self.config.tmp_dir.join("crash_start_time");
         if let Ok(content) = std::fs::read_to_string(start_time_file)
-            && let Ok(start_time) = content.trim().parse::<u64>() {
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs();
-                return Duration::from_secs(now - start_time);
-            }
+            && let Ok(start_time) = content.trim().parse::<u64>()
+        {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            return Duration::from_secs(now - start_time);
+        }
         Duration::from_secs(0)
     }
 }
