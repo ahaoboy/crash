@@ -8,8 +8,8 @@ use std::{path::PathBuf, str::FromStr};
 // Re-export for convenience
 
 #[derive(Parser)]
-#[command(name = "shellcrash")]
-#[command(about = "ShellCrash - A tool for managing proxy cores like Clash/Mihomo/SingBox", long_about = None)]
+#[command(name = "crash", version)]
+#[command(about = "crash - A tool for managing proxy cores like Clash/Mihomo/SingBox", long_about = None)]
 struct Cli {
     /// Configuration file path
     #[arg(short, long, value_name = "FILE")]
@@ -90,9 +90,10 @@ fn main() -> anyhow::Result<()> {
     if let Some(config_dir) = dirs::config_dir() {
         let lang_file = config_dir.join("shellcrash").join("language");
         if let Ok(lang_code) = std::fs::read_to_string(&lang_file)
-            && let Ok(lang) = crash::common::Language::from_str(lang_code.trim()) {
-                crash::common::set_language(lang);
-            }
+            && let Ok(lang) = crash::common::Language::from_str(lang_code.trim())
+        {
+            crash::common::set_language(lang);
+        }
     }
 
     let cli = Cli::parse();
