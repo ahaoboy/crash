@@ -6,6 +6,14 @@ use std::sync::RwLock;
 const APP_CONFIG_DIR: &str = ".crash_config";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub enum UI {
+    #[default]
+    Yacd,
+    Zashboard,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+
 pub struct AppConfig {
     version: String,
     config_dir: String,
@@ -14,6 +22,7 @@ pub struct AppConfig {
     core: CrashCore,
     proxy: Proxy,
     target: Target,
+    ui: UI,
 }
 
 fn app_config_dir() -> String {
