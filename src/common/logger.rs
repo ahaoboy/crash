@@ -99,9 +99,10 @@ impl Logger {
 
         // Write to log file
         if let Some(ref file) = self.log_file
-            && let Ok(mut f) = file.lock() {
-                let _ = writeln!(f, "{}", log_text);
-            }
+            && let Ok(mut f) = file.lock()
+        {
+            let _ = writeln!(f, "{}", log_text);
+        }
     }
 
     /// Log debug message
@@ -134,10 +135,11 @@ impl Logger {
 
         // Also write to log file
         if let Some(ref file) = self.log_file
-            && let Ok(mut f) = file.lock() {
-                let timestamp = Local::now().format("%Y-%m-%d_%H:%M:%S");
-                let _ = writeln!(f, "{}~{}", timestamp, message);
-            }
+            && let Ok(mut f) = file.lock()
+        {
+            let timestamp = Local::now().format("%Y-%m-%d_%H:%M:%S");
+            let _ = writeln!(f, "{}~{}", timestamp, message);
+        }
     }
 
     /// Push log message to configured services

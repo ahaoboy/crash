@@ -2,7 +2,7 @@
 // Copyright (C) Rust Port
 
 use clap::{Parser, Subcommand};
-use crash::Config;
+use crash::{Config, core::ensure_app_config_dir};
 use std::{path::PathBuf, str::FromStr};
 
 // Re-export for convenience
@@ -85,6 +85,8 @@ enum DdnsCommands {
 fn main() -> anyhow::Result<()> {
     // Initialize logger
     env_logger::init();
+
+    ensure_app_config_dir();
 
     // Load language preference
     if let Some(config_dir) = dirs::config_dir() {

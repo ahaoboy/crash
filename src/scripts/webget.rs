@@ -352,9 +352,10 @@ impl Downloader {
         for db in databases {
             let db_path = self.config.crash_dir.join(db);
             if db_path.exists()
-                && let Err(e) = self.download_geoip(db) {
-                    self.logger.warn(&format!("更新 {} 失败: {}", db, e));
-                }
+                && let Err(e) = self.download_geoip(db)
+            {
+                self.logger.warn(&format!("更新 {} 失败: {}", db, e));
+            }
         }
 
         self.logger.info("GeoIP 数据库更新完成");

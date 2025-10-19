@@ -2,10 +2,10 @@
 // Copyright (C) Rust Port
 
 pub mod common;
+pub mod core;
+pub mod download;
 pub mod scripts;
 pub mod tools;
-pub mod core;
-
 
 // Re-export commonly used types
 pub use common::{

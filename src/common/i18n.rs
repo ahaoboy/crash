@@ -5,10 +5,12 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::RwLock;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+
 pub enum Language {
-    English,
+    #[default]
     Chinese,
+    English,
 }
 
 impl FromStr for Language {

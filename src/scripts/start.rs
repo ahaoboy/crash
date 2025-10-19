@@ -291,13 +291,14 @@ impl ServiceManager {
     fn get_uptime(&self) -> Duration {
         let start_time_file = self.config.tmp_dir.join("crash_start_time");
         if let Ok(content) = fs::read_to_string(start_time_file)
-            && let Ok(start_time) = content.trim().parse::<u64>() {
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs();
-                return Duration::from_secs(now - start_time);
-            }
+            && let Ok(start_time) = content.trim().parse::<u64>()
+        {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            return Duration::from_secs(now - start_time);
+        }
         Duration::from_secs(0)
     }
 }

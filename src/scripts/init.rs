@@ -208,9 +208,9 @@ impl InitManager {
 
         let path = PathBuf::from(path);
         if !path.exists()
-            || path.to_str().is_some_and(|s| {
-                s.contains("tmp") || s.contains("opt") || s.contains("sys")
-            })
+            || path
+                .to_str()
+                .is_some_and(|s| s.contains("tmp") || s.contains("opt") || s.contains("sys"))
         {
             self.logger.error("路径错误！请重新设置！");
             return self.select_custom_directory();
@@ -355,11 +355,12 @@ impl InitManager {
     // Helper methods
     fn check_write_permission(&self, path: &Path) -> bool {
         if let Some(parent) = path.parent()
-            && parent.exists() {
-                return fs::metadata(parent)
-                    .map(|m| !m.permissions().readonly())
-                    .unwrap_or(false);
-            }
+            && parent.exists()
+        {
+            return fs::metadata(parent)
+                .map(|m| !m.permissions().readonly())
+                .unwrap_or(false);
+        }
         false
     }
 

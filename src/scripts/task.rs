@@ -105,15 +105,16 @@ impl TaskManager {
 
                 let parts: Vec<&str> = line.split('#').collect();
                 if parts.len() >= 3
-                    && let Ok(id) = parts[0].trim().parse::<u32>() {
-                        tasks.push(Task {
-                            id,
-                            command: parts[1].trim().to_string(),
-                            name: parts[2].trim().to_string(),
-                            schedule: String::new(),
-                            description: String::new(),
-                        });
-                    }
+                    && let Ok(id) = parts[0].trim().parse::<u32>()
+                {
+                    tasks.push(Task {
+                        id,
+                        command: parts[1].trim().to_string(),
+                        name: parts[2].trim().to_string(),
+                        schedule: String::new(),
+                        description: String::new(),
+                    });
+                }
             }
         }
 
@@ -127,15 +128,16 @@ impl TaskManager {
 
                 let parts: Vec<&str> = line.split('#').collect();
                 if parts.len() >= 3
-                    && let Ok(id) = parts[0].trim().parse::<u32>() {
-                        tasks.push(Task {
-                            id,
-                            command: parts[1].trim().to_string(),
-                            name: parts[2].trim().to_string(),
-                            schedule: String::new(),
-                            description: String::new(),
-                        });
-                    }
+                    && let Ok(id) = parts[0].trim().parse::<u32>()
+                {
+                    tasks.push(Task {
+                        id,
+                        command: parts[1].trim().to_string(),
+                        name: parts[2].trim().to_string(),
+                        schedule: String::new(),
+                        description: String::new(),
+                    });
+                }
             }
         }
 
