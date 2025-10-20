@@ -46,13 +46,17 @@ impl AppConfig {
                 ..Default::default()
             };
 
-            let s = serde_json::to_string_pretty(&c)?;
-            mkdir(&app_config_dir());
-            std::fs::write(app_config_path(), s)?;
             c
         };
-
+        c.save()?;
         Ok(c)
+    }
+
+    pub fn save(&self) -> anyhow::Result<()> {
+        let s = serde_json::to_string_pretty(self)?;
+        mkdir(&app_config_dir());
+        std::fs::write(app_config_path(), s)?;
+        Ok(())
     }
 }
 
