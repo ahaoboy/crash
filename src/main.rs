@@ -5,6 +5,7 @@ use clap::{Parser, Subcommand};
 use crash::{
     Config,
     core::{APP_CONFIG, app_config_dir, mkdir},
+    download::Proxy,
 };
 use std::{path::PathBuf, str::FromStr};
 
@@ -25,6 +26,10 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Install,
+
+    Proxy {
+        proxy: Proxy,
+    },
 
     /// Initialize ShellCrash
     Init,
@@ -137,6 +142,15 @@ async fn main() -> anyhow::Result<()> {
 
             config.core.install().await;
             config.core.run(vec![]);
+            Ok(())
+        }
+        Some(Commands::Proxy { proxy }) => {
+            let mut config = APP_CONFIG
+                .write()
+                .map_err(|_| anyhow::anyhow!("Failed to acquire write lock for app config"))?;
+            config.proxy = proxy;
+            println!("{} {}", "Proxy set to".to_string(), config.proxy);
+            config.save()?;
             Ok(())
         }
         Some(Commands::Init) => {
