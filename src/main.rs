@@ -2,7 +2,10 @@
 // Copyright (C) Rust Port
 
 use clap::{Parser, Subcommand};
-use crash::{Config, core::ensure_app_config_dir};
+use crash::{
+    Config,
+    core::{APP_CONFIG, app_config_dir, mkdir},
+};
 use std::{path::PathBuf, str::FromStr};
 
 // Re-export for convenience
@@ -21,6 +24,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    Install,
+
     /// Initialize ShellCrash
     Init,
 
@@ -86,7 +91,7 @@ fn main() -> anyhow::Result<()> {
     // Initialize logger
     env_logger::init();
 
-    ensure_app_config_dir();
+    mkdir(app_config_dir().as_str());
 
     // Load language preference
     if let Some(config_dir) = dirs::config_dir() {
@@ -124,6 +129,14 @@ fn main() -> anyhow::Result<()> {
 
     // Handle commands
     match cli.command {
+        Some(Commands::Install) => {
+            let config = APP_CONFIG
+                .read()
+                .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
+
+            config.core.install();
+            Ok(())
+        }
         Some(Commands::Init) => {
             use crash::scripts::InitManager;
 
