@@ -1,5 +1,9 @@
-use crate::{common::Language, download::Proxy};
+use crate::{
+    common::Language,
+    download::{Proxy, Repo, RepoRelease},
+};
 use anyhow::Ok;
+use easy_install::Args;
 use guess_target::Target;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -66,10 +70,10 @@ pub fn app_config_path() -> String {
 }
 
 pub fn mkdir(dir: &str) {
-    if !std::fs::exists(dir).unwrap_or(false) {
-        if let Err(e) = std::fs::create_dir_all(dir) {
-            eprintln!("Failed to create config directory {}: {}", dir, e);
-        }
+    if !std::fs::exists(dir).unwrap_or(false)
+        && let Err(e) = std::fs::create_dir_all(dir)
+    {
+        eprintln!("Failed to create config directory {}: {}", dir, e);
     }
 }
 
@@ -106,11 +110,80 @@ impl CrashCore {
         format!("{}/{}", d, s)
     }
 
-    pub fn install(&self) -> Option<()> {
+    pub fn exe_path(&self) -> String {
+        let d = self.config_dir();
+        let ext = cfg!(target_os = "windows").then(|| ".exe").unwrap_or("");
+        format!("{}/{}{ext}", d, self.name())
+    }
+
+    pub async fn install(&self) -> Option<()> {
+        if std::fs::exists(&self.exe_path()).ok()? {
+            return None;
+        }
+
         let config = APP_CONFIG.read().ok()?;
 
         mkdir(&config.core.config_dir());
 
+        let url = self.core_url();
+        println!("url {}", url);
+        easy_install::run_main(easy_install::Args {
+            url,
+            dir: Some(self.config_dir()),
+            install_only: true,
+            name: vec![],
+            alias: Some(self.name().to_string()),
+            target: None,
+        })
+        .await
+        .ok()?;
         None
+    }
+
+    pub fn release_file_name(&self) -> String {
+        use CrashCore::*;
+        let target = &APP_CONFIG.read().unwrap().target;
+        match (self, target) {
+            (Mihomo, Target::X86_64PcWindowsMsvc | Target::X86_64PcWindowsGnu) => {
+                // "mihomo-windows-amd64-v1.19.15.zip".to_string()
+                "guess-target-x86_64-pc-windows-msvc.zip".to_string()
+            }
+            _ => todo!("Not support {:?} on {:?}", self, target),
+        }
+    }
+    pub fn repo(&self) -> RepoRelease {
+        match self {
+            CrashCore::Mihomo => RepoRelease {
+                // repo: Repo {
+                //     user: "MetaCubeX".to_string(),
+                //     repo: "mihomo".to_string(),
+                // },
+                // tag: "v1.19.15".to_string(),
+                // name: self.release_file_name(),
+                repo: Repo {
+                    user: "ahaoboy".to_string(),
+                    repo: "guess-target".to_string(),
+                },
+                tag: "nightly".to_string(),
+                name: self.release_file_name(),
+                // https://github.com/ahaoboy/guess-target/releases/download/nightly/
+            },
+            CrashCore::Clash => todo!(),
+            CrashCore::Singbox => todo!(),
+        }
+    }
+
+    pub fn core_url(&self) -> String {
+        let c = APP_CONFIG.read().unwrap();
+        c.proxy.url(self.repo())
+    }
+
+    pub fn run(&self, args: Vec<String>) -> Option<()> {
+        let exe_path = format!("{}/{}", self.config_dir(), self.name());
+        std::process::Command::new(exe_path)
+            .args(args)
+            .spawn()
+            .ok()?;
+        Some(())
     }
 }

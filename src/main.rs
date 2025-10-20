@@ -87,7 +87,8 @@ enum DdnsCommands {
     Update { name: String },
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     // Initialize logger
     env_logger::init();
 
@@ -134,7 +135,8 @@ fn main() -> anyhow::Result<()> {
                 .read()
                 .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
 
-            config.core.install();
+            config.core.install().await;
+            config.core.run(vec![]);
             Ok(())
         }
         Some(Commands::Init) => {
