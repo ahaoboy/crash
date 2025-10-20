@@ -126,7 +126,6 @@ impl CrashCore {
         mkdir(&config.core.config_dir());
 
         let url = self.core_url();
-        println!("url {}", url);
         easy_install::run_main(easy_install::Args {
             url,
             dir: Some(self.config_dir()),
@@ -147,6 +146,9 @@ impl CrashCore {
             (Mihomo, Target::X86_64PcWindowsMsvc | Target::X86_64PcWindowsGnu) => {
                 // "mihomo-windows-amd64-v1.19.15.zip".to_string()
                 "guess-target-x86_64-pc-windows-msvc.zip".to_string()
+            }
+            (Mihomo, Target::Aarch64UnknownLinuxMusl) => {
+                "guess-target-aarch64-unknown-linux-musl.tar.gz".to_string()
             }
             _ => todo!("Not support {:?} on {:?}", self, target),
         }

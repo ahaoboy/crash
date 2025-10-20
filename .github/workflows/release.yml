@@ -10,7 +10,7 @@ defaults:
     shell: bash --noprofile --norc -CeEuo pipefail {0}
 
 jobs:
-  upload-assets:
+  build:
     strategy:
       matrix:
         include:
