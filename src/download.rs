@@ -65,7 +65,7 @@ impl Proxy {
                 user, repo, tag, name
             ),
             Proxy::Xget => {
-                format!("https://xget.xi-xu.me/gh/{user}/{repo}/releases/download/{tag}/miho{name}")
+                format!("https://xget.xi-xu.me/gh/{user}/{repo}/releases/download/{tag}/{name}")
             }
             Proxy::GhProxy => format!(
                 "https://gh-proxy.com/https://github.com/{user}/{repo}/releases/download/{tag}/{name}"
