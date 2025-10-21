@@ -152,7 +152,7 @@ async fn main() -> anyhow::Result<()> {
                 .write()
                 .map_err(|_| anyhow::anyhow!("Failed to acquire write lock for app config"))?;
             config.proxy = proxy;
-            println!("{} {}", "Proxy set to".to_string(), config.proxy);
+            println!("{} {}", "Proxy set to", config.proxy);
             config.save()?;
             Ok(())
         }

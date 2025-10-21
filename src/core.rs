@@ -51,7 +51,7 @@ impl UI {
     }
 
     pub async fn install(&self) -> Option<()> {
-        if std::fs::exists(&self.assets_dir()).ok()? {
+        if std::fs::exists(self.assets_dir()).ok()? {
             return None;
         }
 
@@ -92,13 +92,11 @@ impl AppConfig {
             let config: AppConfig = serde_json::from_str(&data)?;
             config
         } else {
-            let c = AppConfig {
+            AppConfig {
                 version: env!("CARGO_PKG_VERSION").to_string(),
                 config_dir: app_config_dir(),
                 ..Default::default()
-            };
-
-            c
+            }
         };
         c.save()?;
         Ok(c)
@@ -175,11 +173,10 @@ impl CrashCore {
                     default_config.log_level = Some("info".to_string());
                     // default_config.ipv6 = false;
 
-                    if let Ok(config_str) = serde_yaml::to_string(&default_config) {
-                        if let Err(e) = std::fs::write(&config_path, config_str) {
+                    if let Ok(config_str) = serde_yaml::to_string(&default_config)
+                        && let Err(e) = std::fs::write(&config_path, config_str) {
                             eprintln!("Failed to write default mihomo config: {}", e);
                         }
-                    }
                 }
             }
             _ => {
@@ -191,7 +188,7 @@ impl CrashCore {
     pub async fn install(&self) -> Option<()> {
         self.make_config();
 
-        if std::fs::exists(&self.exe_path()).ok()? {
+        if std::fs::exists(self.exe_path()).ok()? {
             return None;
         }
 
@@ -221,7 +218,10 @@ impl CrashCore {
                 "mihomo-windows-amd64-v1.19.15.zip".to_string()
             }
             (Mihomo, Target::Aarch64UnknownLinuxMusl) => {
-                "mihomo-linux-arm64-v1.19.15.gz".to_string()
+                "mihomo-linux-arm64-v1.19.15.tgz".to_string()
+            }
+            (Mihomo, Target::X86_64UnknownLinuxGnu) => {
+                "mihomo-linux-amd64-v1.19.15.tgz".to_string()
             }
             _ => todo!("Not support {:?} on {:?}", self, target),
         }
