@@ -6,11 +6,24 @@ use guess_target::Target;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::sync::RwLock;
+use strum::{Display, EnumString, IntoStaticStr};
 
 const APP_CONFIG_DIR: &str = ".crash_config";
 const APP_CONFIG_NAME: &str = "crash_config.json";
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
+#[derive(
+    Debug,
+    EnumString,
+    Display,
+    IntoStaticStr,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+    Default,
+    Deserialize,
+    Serialize,
+)]
 pub enum UI {
     #[default]
     Metacubexd,
@@ -20,11 +33,7 @@ pub enum UI {
 
 impl UI {
     pub fn name(&self) -> &'static str {
-        match self {
-            UI::Yacd => "yacd",
-            UI::Zashboard => "zashboard",
-            UI::Metacubexd => "metacubexd",
-        }
+        self.into()
     }
     pub fn assets_dir(&self) -> String {
         let d = app_config_dir();
@@ -137,7 +146,19 @@ pub static APP_CONFIG: Lazy<RwLock<AppConfig>> = Lazy::new(|| {
         .into()
 });
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
+#[derive(
+    Debug,
+    EnumString,
+    Display,
+    IntoStaticStr,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+    Default,
+    Deserialize,
+    Serialize,
+)]
 pub enum CrashCore {
     #[default]
     Mihomo,
@@ -147,11 +168,7 @@ pub enum CrashCore {
 
 impl CrashCore {
     pub fn name(&self) -> &'static str {
-        match self {
-            CrashCore::Mihomo => "mihomo",
-            CrashCore::Clash => "clash",
-            CrashCore::Singbox => "singbox",
-        }
+        self.into()
     }
     pub fn exe_path(&self) -> String {
         let d = app_config_dir();
@@ -164,19 +181,17 @@ impl CrashCore {
                 let config_path = self.config_path();
                 if !std::fs::exists(&config_path).unwrap_or(false) {
                     let c = APP_CONFIG.read().unwrap();
-                    let mut default_config = serde_clash::Config::default();
+                    let mut default_config: serde_clash::Config =
+                        serde_yaml::from_str(include_str!("./assets/mihomo.yaml"))
+                            .expect("Failed to load default config");
 
                     default_config.external_ui = format!("./{}", c.ui.name());
-                    default_config.external_controller = format!(":{}", 9090);
-                    default_config.port = 7890;
-                    default_config.mode = "rule".to_string();
-                    default_config.log_level = Some("info".to_string());
-                    // default_config.ipv6 = false;
 
                     if let Ok(config_str) = serde_yaml::to_string(&default_config)
-                        && let Err(e) = std::fs::write(&config_path, config_str) {
-                            eprintln!("Failed to write default mihomo config: {}", e);
-                        }
+                        && let Err(e) = std::fs::write(&config_path, config_str)
+                    {
+                        eprintln!("Failed to write default mihomo config: {}", e);
+                    }
                 }
             }
             _ => {
@@ -254,6 +269,21 @@ impl CrashCore {
             .ok()?;
         Some(())
     }
+
+    pub fn stop(&self) -> Option<()> {
+        use std::process::Command;
+        let name = self.name();
+        if cfg!(target_os = "windows") {
+            Command::new("taskkill")
+                .args(["/F", "/IM", &format!("{name}.exe")])
+                .spawn()
+                .ok()?;
+        } else {
+            Command::new("pkill").args([name]).spawn().ok()?;
+        }
+        Some(())
+    }
+
     pub fn config_file_name(&self) -> String {
         format!("{}.yaml", self.name())
     }

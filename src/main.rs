@@ -6,6 +6,7 @@ use crash::{
     Config,
     core::{APP_CONFIG, app_config_dir, mkdir},
     download::Proxy,
+    tools::stop,
 };
 use std::{path::PathBuf, str::FromStr};
 
@@ -142,9 +143,6 @@ async fn main() -> anyhow::Result<()> {
 
             config.core.install().await;
             config.ui.install().await;
-            config
-                .core
-                .run(vec!["-f".to_string(), config.core.config_path()]);
             Ok(())
         }
         Some(Commands::Proxy { proxy }) => {
@@ -185,16 +183,30 @@ async fn main() -> anyhow::Result<()> {
             menu.show_main_menu()
         }
         Some(Commands::Start) => {
-            use crash::scripts::ServiceManager;
+            // use crash::scripts::ServiceManager;
+            // let service = ServiceManager::new(config);
+            // service.start()
+            let config = APP_CONFIG
+                .read()
+                .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
 
-            let service = ServiceManager::new(config);
-            service.start()
+            config
+                .core
+                .run(vec!["-f".to_string(), config.core.config_path()]);
+            Ok(())
         }
         Some(Commands::Stop) => {
-            use crash::scripts::ServiceManager;
+            // use crash::scripts::ServiceManager;
 
-            let service = ServiceManager::new(config);
-            service.stop()
+            // let service = ServiceManager::new(config);
+            // service.stop();
+
+            let config = APP_CONFIG
+                .read()
+                .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
+
+            stop::stop_process(&config.core.exe_path())?;
+            Ok(())
         }
         Some(Commands::Restart) => {
             use crash::scripts::ServiceManager;
