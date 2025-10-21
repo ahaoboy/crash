@@ -37,6 +37,7 @@ guess-target = { version = "0.1", git = "https://github.com/ahaoboy/guess-target
 ] }
 tokio = { version = "1", features = ["full"], default-features = false }
 easy-install = { version = "1", git = "https://github.com/easy-install/easy-install" }
+serde-clash = { version = "0.1", git = "https://github.com/ahaoboy/serde-clash" }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }

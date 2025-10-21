@@ -2,8 +2,6 @@ use crate::{
     common::Language,
     download::{Proxy, Repo, RepoRelease},
 };
-use anyhow::Ok;
-use easy_install::Args;
 use guess_target::Target;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -15,8 +13,62 @@ const APP_CONFIG_NAME: &str = "crash_config.json";
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
 pub enum UI {
     #[default]
-    Yacd,
+    Metacubexd,
     Zashboard,
+    Yacd,
+}
+
+impl UI {
+    pub fn name(&self) -> &'static str {
+        match self {
+            UI::Yacd => "yacd",
+            UI::Zashboard => "zashboard",
+            UI::Metacubexd => "metacubexd",
+        }
+    }
+    pub fn assets_dir(&self) -> String {
+        let d = app_config_dir();
+        format!("{}/{}", d, self.name())
+    }
+    pub fn release_file_name(&self) -> String {
+        use UI::*;
+        match self {
+            Yacd => "yacd.tar.xz".to_string(),
+            Zashboard => "zashboard.zip".to_string(),
+            Metacubexd => "metacubexd.tgz".to_string(),
+        }
+    }
+    pub fn url(&self) -> String {
+        let c = APP_CONFIG.read().unwrap();
+        c.proxy.url(RepoRelease {
+            repo: Repo {
+                user: "ahaoboy".to_string(),
+                repo: "crash-assets".to_string(),
+            },
+            tag: "nightly".to_string(),
+            name: self.release_file_name(),
+        })
+    }
+
+    pub async fn install(&self) -> Option<()> {
+        if std::fs::exists(&self.assets_dir()).ok()? {
+            return None;
+        }
+
+        let url = self.url();
+        easy_install::run_main(easy_install::Args {
+            url,
+            dir: Some(self.assets_dir()),
+            install_only: true,
+            name: vec![],
+            alias: None,
+            target: None,
+        })
+        .await
+        .ok()?;
+
+        None
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
@@ -103,36 +155,54 @@ impl CrashCore {
             CrashCore::Singbox => "singbox",
         }
     }
-
-    pub fn config_dir(&self) -> String {
-        let d = app_config_dir();
-        let s = match self {
-            CrashCore::Mihomo => ".mihomo_config",
-            CrashCore::Clash => ".clash_config",
-            CrashCore::Singbox => ".singbox_config",
-        };
-        format!("{}/{}", d, s)
-    }
-
     pub fn exe_path(&self) -> String {
-        let d = self.config_dir();
+        let d = app_config_dir();
         let ext = cfg!(target_os = "windows").then(|| ".exe").unwrap_or("");
         format!("{}/{}{ext}", d, self.name())
     }
+    pub fn make_config(&self) {
+        match self {
+            CrashCore::Mihomo => {
+                let config_path = self.config_path();
+                if !std::fs::exists(&config_path).unwrap_or(false) {
+                    let c = APP_CONFIG.read().unwrap();
+                    let mut default_config = serde_clash::Config::default();
+
+                    default_config.external_ui = format!("./{}", c.ui.name());
+                    default_config.external_controller = format!(":{}", 9090);
+                    default_config.port = 7890;
+                    default_config.mode = "rule".to_string();
+                    default_config.log_level = Some("info".to_string());
+                    // default_config.ipv6 = false;
+
+                    if let Ok(config_str) = serde_yaml::to_string(&default_config) {
+                        if let Err(e) = std::fs::write(&config_path, config_str) {
+                            eprintln!("Failed to write default mihomo config: {}", e);
+                        }
+                    }
+                }
+            }
+            _ => {
+                todo!()
+            }
+        }
+    }
 
     pub async fn install(&self) -> Option<()> {
+        self.make_config();
+
         if std::fs::exists(&self.exe_path()).ok()? {
             return None;
         }
 
         let config = APP_CONFIG.read().ok()?;
 
-        mkdir(&config.core.config_dir());
+        mkdir(&config.config_dir);
 
         let url = self.core_url();
         easy_install::run_main(easy_install::Args {
             url,
-            dir: Some(self.config_dir()),
+            dir: Some(config.config_dir.clone()),
             install_only: true,
             name: vec![],
             alias: Some(self.name().to_string()),
@@ -148,11 +218,10 @@ impl CrashCore {
         let target = &APP_CONFIG.read().unwrap().target;
         match (self, target) {
             (Mihomo, Target::X86_64PcWindowsMsvc | Target::X86_64PcWindowsGnu) => {
-                // "mihomo-windows-amd64-v1.19.15.zip".to_string()
-                "guess-target-x86_64-pc-windows-msvc.zip".to_string()
+                "mihomo-windows-amd64-v1.19.15.zip".to_string()
             }
             (Mihomo, Target::Aarch64UnknownLinuxMusl) => {
-                "guess-target-aarch64-unknown-linux-musl.tar.gz".to_string()
+                "mihomo-linux-arm64-v1.19.15.gz".to_string()
             }
             _ => todo!("Not support {:?} on {:?}", self, target),
         }
@@ -160,19 +229,12 @@ impl CrashCore {
     pub fn repo(&self) -> RepoRelease {
         match self {
             CrashCore::Mihomo => RepoRelease {
-                // repo: Repo {
-                //     user: "MetaCubeX".to_string(),
-                //     repo: "mihomo".to_string(),
-                // },
-                // tag: "v1.19.15".to_string(),
-                // name: self.release_file_name(),
                 repo: Repo {
                     user: "ahaoboy".to_string(),
-                    repo: "guess-target".to_string(),
+                    repo: "crash-assets".to_string(),
                 },
                 tag: "nightly".to_string(),
                 name: self.release_file_name(),
-                // https://github.com/ahaoboy/guess-target/releases/download/nightly/
             },
             CrashCore::Clash => todo!(),
             CrashCore::Singbox => todo!(),
@@ -185,11 +247,19 @@ impl CrashCore {
     }
 
     pub fn run(&self, args: Vec<String>) -> Option<()> {
-        let exe_path = format!("{}/{}", self.config_dir(), self.name());
+        let exe_path = self.exe_path();
         std::process::Command::new(exe_path)
             .args(args)
             .spawn()
             .ok()?;
         Some(())
+    }
+    pub fn config_file_name(&self) -> String {
+        format!("{}.yaml", self.name())
+    }
+
+    pub fn config_path(&self) -> String {
+        let c = APP_CONFIG.read().unwrap();
+        format!("{}/{}", c.config_dir, self.config_file_name())
     }
 }

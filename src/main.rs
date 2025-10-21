@@ -141,7 +141,10 @@ async fn main() -> anyhow::Result<()> {
                 .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
 
             config.core.install().await;
-            config.core.run(vec![]);
+            config.ui.install().await;
+            config
+                .core
+                .run(vec!["-f".to_string(), config.core.config_path()]);
             Ok(())
         }
         Some(Commands::Proxy { proxy }) => {
