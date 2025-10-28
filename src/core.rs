@@ -82,7 +82,7 @@ impl UI {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
 
-pub struct AppConfig {
+pub struct CrashConfig {
     pub version: String,
     pub config_dir: String,
     pub start_time: usize,
@@ -91,17 +91,18 @@ pub struct AppConfig {
     pub proxy: Proxy,
     pub target: Target,
     pub ui: UI,
+    pub url: String,
 }
 
-impl AppConfig {
+impl CrashConfig {
     pub fn load() -> anyhow::Result<Self> {
         let p = format!("{}/{}", app_config_dir(), APP_CONFIG_NAME);
         let c = if std::fs::exists(&p)? {
             let data = std::fs::read_to_string(&p)?;
-            let config: AppConfig = serde_json::from_str(&data)?;
+            let config: CrashConfig = serde_json::from_str(&data)?;
             config
         } else {
-            AppConfig {
+            CrashConfig {
                 version: env!("CARGO_PKG_VERSION").to_string(),
                 config_dir: app_config_dir(),
                 ..Default::default()
@@ -140,8 +141,8 @@ pub fn mkdir(dir: &str) {
     }
 }
 
-pub static APP_CONFIG: Lazy<RwLock<AppConfig>> = Lazy::new(|| {
-    AppConfig::load()
+pub static APP_CONFIG: Lazy<RwLock<CrashConfig>> = Lazy::new(|| {
+    CrashConfig::load()
         .expect("Failed to load crash config")
         .into()
 });

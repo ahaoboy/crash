@@ -67,6 +67,10 @@ enum Commands {
         /// Language code: en (English) or zh (Chinese)
         language: String,
     },
+
+    Url {
+        url: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -136,6 +140,14 @@ async fn main() -> anyhow::Result<()> {
 
     // Handle commands
     match cli.command {
+        Some(Commands::Url { url }) => {
+            let mut config = APP_CONFIG
+                .write()
+                .map_err(|_| anyhow::anyhow!("Failed to acquire write lock for app config"))?;
+            config.url = url;
+            config.save()?;
+            Ok(())
+        }
         Some(Commands::Install) => {
             let config = APP_CONFIG
                 .read()
