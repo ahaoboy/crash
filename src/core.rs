@@ -2,10 +2,12 @@ use crate::{
     common::Language,
     download::{Proxy, Repo, RepoRelease},
 };
+use anyhow::Context;
 use guess_target::Target;
 use once_cell::sync::Lazy;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::sync::RwLock;
+use std::{fs::File, io::Write as _, sync::RwLock};
 use strum::{Display, EnumString, IntoStaticStr};
 
 const APP_CONFIG_DIR: &str = ".crash_config";
@@ -292,5 +294,29 @@ impl CrashCore {
     pub fn config_path(&self) -> String {
         let c = APP_CONFIG.read().unwrap();
         format!("{}/{}", c.config_dir, self.config_file_name())
+    }
+
+    pub async fn update(&self, url: &str) -> Option<()> {
+        let dest = self.config_path();
+        if std::fs::exists(&dest).unwrap_or(false) {
+            return Some(());
+        }
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(300))
+            .build()
+            .unwrap_or_else(|_| Client::new());
+
+        let response = client
+            .get(url)
+            .send()
+            .await
+            .context("发送HTTP请求失败")
+            .ok()?;
+        let bytes = response.bytes().await.context("读取响应数据失败").ok()?;
+        let mut file = File::create(&dest)
+            .context(format!("创建文件失败: {}", dest))
+            .ok()?;
+        file.write_all(&bytes).context("写入文件失败").ok()?;
+        Some(())
     }
 }

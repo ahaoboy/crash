@@ -10,14 +10,14 @@ pub fn stop_process(name_or_path: &str) -> io::Result<()> {
         .unwrap_or(name_or_path);
 
     let output = Command::new("cmd")
-        .args(&["/c", &format!("taskkill /IM {process_name} /F")])
+        .args(["/c", &format!("taskkill /IM {process_name} /F")])
         .output()?;
 
     if output.status.success() {
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(io::Error::new(io::ErrorKind::Other, stderr.to_string()))
+        Err(io::Error::other(stderr.to_string()))
     }
 }
 

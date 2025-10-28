@@ -71,6 +71,7 @@ enum Commands {
     Url {
         url: String,
     },
+    Update,
 }
 
 #[derive(Subcommand)]
@@ -162,7 +163,7 @@ async fn main() -> anyhow::Result<()> {
                 .write()
                 .map_err(|_| anyhow::anyhow!("Failed to acquire write lock for app config"))?;
             config.proxy = proxy;
-            println!("{} {}", "Proxy set to", config.proxy);
+            println!("Proxy set to {}", config.proxy);
             config.save()?;
             Ok(())
         }
@@ -337,6 +338,14 @@ async fn main() -> anyhow::Result<()> {
             } else {
                 eprintln!("Invalid language. Use 'en' for English or 'zh' for Chinese.");
             }
+            Ok(())
+        }
+        Some(Commands::Update) => {
+            let config = APP_CONFIG
+                .read()
+                .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
+
+            config.core.update(&config.url).await;
             Ok(())
         }
         None => {
