@@ -1,13 +1,12 @@
 use crate::{
-    common::Language,
-    download::{Proxy, Repo, RepoRelease},
+    // common::Language,
+    download::{Proxy, Repo, RepoRelease, download_file},
 };
-use anyhow::Context;
+use anyhow::Result;
 use guess_target::Target;
 use once_cell::sync::Lazy;
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::Write as _, sync::RwLock};
+use std::sync::RwLock;
 use strum::{Display, EnumString, IntoStaticStr};
 
 const APP_CONFIG_DIR: &str = ".crash_config";
@@ -88,7 +87,7 @@ pub struct CrashConfig {
     pub version: String,
     pub config_dir: String,
     pub start_time: usize,
-    pub language: Language,
+    // pub language: Language,
     pub core: CrashCore,
     pub proxy: Proxy,
     pub target: Target,
@@ -118,6 +117,38 @@ impl CrashConfig {
         let s = serde_json::to_string_pretty(self)?;
         mkdir(&app_config_dir());
         std::fs::write(app_config_path(), s)?;
+        Ok(())
+    }
+
+    /// Update GeoIP database
+    pub async fn update_geoip(&self) -> Result<()> {
+        // Update all GeoIP databases
+        let databases = vec![
+            "Country.mmdb",
+            "GeoSite.dat",
+            "geoip.db",
+            "geosite.db",
+            "geosite-cn.mrs",
+            "geoip-cn.srs",
+            "geosite-cn.srs",
+        ];
+
+        for db in databases {
+            let db_path = format!("{}/{}", self.config_dir, db);
+
+            if !std::fs::exists(db_path).unwrap_or(false) {
+                self.download_geoip(db).await?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Download GeoIP database
+    pub async fn download_geoip(&self, db_type: &str) -> Result<()> {
+        let update_url = "https://fastly.jsdelivr.net/gh/juewuy/ShellCrash@master";
+        let db_url = format!("{}/bin/geodata/{}", update_url, db_type);
+        let dest = format!("{}/{}", self.config_dir, db_type);
+        download_file(&db_url, &dest).await?;
         Ok(())
     }
 }
@@ -301,22 +332,7 @@ impl CrashCore {
         if std::fs::exists(&dest).unwrap_or(false) {
             return Some(());
         }
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(300))
-            .build()
-            .unwrap_or_else(|_| Client::new());
-
-        let response = client
-            .get(url)
-            .send()
-            .await
-            .context("发送HTTP请求失败")
-            .ok()?;
-        let bytes = response.bytes().await.context("读取响应数据失败").ok()?;
-        let mut file = File::create(&dest)
-            .context(format!("创建文件失败: {}", dest))
-            .ok()?;
-        file.write_all(&bytes).context("写入文件失败").ok()?;
+        download_file(url, &dest).await.ok()?;
         Some(())
     }
 }
