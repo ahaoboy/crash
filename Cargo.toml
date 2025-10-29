@@ -40,6 +40,10 @@ easy-install = { version = "1", git = "https://github.com/easy-install/easy-inst
 serde-clash = { version = "0.1", git = "https://github.com/ahaoboy/serde-clash" }
 strum_macros = "0.27"
 strum = { version = "0.27", features = ["derive"] }
+github-proxy = { version = "0.1", git = "https://github.com/ahaoboy/github-proxy", features = [
+  "serde",
+] }
+
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }

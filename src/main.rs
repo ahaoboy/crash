@@ -5,9 +5,9 @@ use clap::{Parser, Subcommand};
 use crash::{
     // Config,
     core::{APP_CONFIG, app_config_dir, mkdir},
-    download::Proxy,
     tools::stop,
 };
+use github_proxy::Proxy;
 use std::path::PathBuf;
 
 // Re-export for convenience
@@ -157,6 +157,7 @@ async fn main() -> anyhow::Result<()> {
 
             config.core.install().await;
             config.ui.install().await;
+            config.update_geoip().await?;
             Ok(())
         }
         Some(Commands::Proxy { proxy }) => {

@@ -1,8 +1,9 @@
 use crate::{
     // common::Language,
-    download::{Proxy, Repo, RepoRelease, download_file},
+    download::download_file,
 };
 use anyhow::Result;
+use github_proxy::{Proxy, Resource};
 use guess_target::Target;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -50,14 +51,14 @@ impl UI {
     }
     pub fn url(&self) -> String {
         let c = APP_CONFIG.read().unwrap();
-        c.proxy.url(RepoRelease {
-            repo: Repo {
-                user: "ahaoboy".to_string(),
+        c.proxy
+            .url(Resource::Release {
+                owner: "ahaoboy".to_string(),
                 repo: "crash-assets".to_string(),
-            },
-            tag: "nightly".to_string(),
-            name: self.release_file_name(),
-        })
+                tag: "nightly".to_string(),
+                name: self.release_file_name(),
+            })
+            .expect("Failed to get proxy url")
     }
 
     pub async fn install(&self) -> Option<()> {
@@ -73,6 +74,9 @@ impl UI {
             name: vec![],
             alias: None,
             target: None,
+            retry: 3,
+            proxy: Proxy::Github,
+            timeout: 600,
         })
         .await
         .ok()?;
@@ -122,20 +126,21 @@ impl CrashConfig {
 
     /// Update GeoIP database
     pub async fn update_geoip(&self) -> Result<()> {
-        // Update all GeoIP databases
         let databases = vec![
+            "china_ip_list.txt",
+            "china_ipv6_list.txt",
+            "cn_mini.mmdb",
             "Country.mmdb",
-            "GeoSite.dat",
-            "geoip.db",
-            "geosite.db",
-            "geosite-cn.mrs",
-            "geoip-cn.srs",
-            "geosite-cn.srs",
+            "geoip_cn.db",
+            "geosite.dat",
+            "geosite_cn.db",
+            "mrs_geosite_cn.mrs",
+            "srs_geoip_cn.srs",
+            "srs_geosite_cn.srs",
         ];
 
         for db in databases {
             let db_path = format!("{}/{}", self.config_dir, db);
-
             if !std::fs::exists(db_path).unwrap_or(false) {
                 self.download_geoip(db).await?;
             }
@@ -143,12 +148,16 @@ impl CrashConfig {
         Ok(())
     }
 
-    /// Download GeoIP database
     pub async fn download_geoip(&self, db_type: &str) -> Result<()> {
-        let update_url = "https://fastly.jsdelivr.net/gh/juewuy/ShellCrash@master";
-        let db_url = format!("{}/bin/geodata/{}", update_url, db_type);
         let dest = format!("{}/{}", self.config_dir, db_type);
-        download_file(&db_url, &dest).await?;
+        let url = Resource::File {
+            owner: "juewuy".to_string(),
+            repo: "ShellCrash".to_string(),
+            reference: "master".to_string(),
+            path: format!("bin/geodata/{}", db_type),
+        }.url(&self.proxy).expect("Failed to get geo url");;
+
+        download_file(&url, &dest).await?;
         Ok(())
     }
 }
@@ -253,6 +262,9 @@ impl CrashCore {
             name: vec![],
             alias: Some(self.name().to_string()),
             target: None,
+            retry: 3,
+            proxy: Proxy::Github,
+            timeout: 600,
         })
         .await
         .ok()?;
@@ -275,13 +287,11 @@ impl CrashCore {
             _ => todo!("Not support {:?} on {:?}", self, target),
         }
     }
-    pub fn repo(&self) -> RepoRelease {
+    pub fn repo(&self) -> Resource {
         match self {
-            CrashCore::Mihomo => RepoRelease {
-                repo: Repo {
-                    user: "ahaoboy".to_string(),
-                    repo: "crash-assets".to_string(),
-                },
+            CrashCore::Mihomo => Resource::Release {
+                owner: "ahaoboy".to_string(),
+                repo: "crash-assets".to_string(),
                 tag: "nightly".to_string(),
                 name: self.release_file_name(),
             },
@@ -292,7 +302,7 @@ impl CrashCore {
 
     pub fn core_url(&self) -> String {
         let c = APP_CONFIG.read().unwrap();
-        c.proxy.url(self.repo())
+        c.proxy.url(self.repo()).expect("Failed to get core url")
     }
 
     pub fn run(&self, args: Vec<String>) -> Option<()> {
