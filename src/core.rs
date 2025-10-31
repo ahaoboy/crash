@@ -132,10 +132,11 @@ impl CrashConfig {
         let s = format!("{} {}", cron, cmd);
 
         if let Ok(list) = exec("crontab", vec!["-l"])
-            && !list.lines().any(|line| &line == &s) {
-                let sh = format!("(crontab -l 2>/dev/null; echo '{}') | crontab -", s);
-                exec("bash", vec!["-c", &sh])?;
-            }
+            && !list.lines().any(|line| &line == &s)
+        {
+            let sh = format!("(crontab -l 2>/dev/null; echo '{}') | crontab -", s);
+            exec("bash", vec!["-c", &sh])?;
+        }
         Ok(())
     }
 
@@ -220,20 +221,23 @@ impl CrashConfig {
             (
                 "status",
                 if self.is_running() {
-                    "√".to_string()
+                    "✅".to_string()
                 } else {
-                    "X".to_string()
+                    "❌".to_string()
                 },
             ),
         ];
 
-        if let Ok(pid) = self.get_pid() {
-            v.push(("pid", pid));
+        if let Ok(pid) = self.get_pid()
+            && pid.trim().len() > 0
+        {
+            v.push(("pid", pid.trim().to_string()));
         }
 
-        let ip = "127.0.0.1";
-        let port = self.web.host.split(":").nth(1).unwrap_or("9090");
-        v.push(("web", format!("http://{}:{}/ui", ip, port)));
+        if let Ok(ip) = local_ip_address::local_ip() {
+            let port = self.web.host.split(":").nth(1).unwrap_or("9090");
+            v.push(("web", format!("http://{}:{}/ui", ip, port)));
+        }
 
         if let Some(memory) = exec(
             "cat",

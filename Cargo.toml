@@ -45,6 +45,7 @@ github-proxy = { version = "0.1", git = "https://github.com/ahaoboy/github-proxy
 ] }
 humansize = "2"
 humantime ="2"
+local-ip-address="0.6"
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
