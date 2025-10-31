@@ -1,10 +1,7 @@
-// ShellCrash Rust Implementation - Main Entry Point
-// Copyright (C) Rust Port
-
 use clap::{Parser, Subcommand};
 use crash::{
     // Config,
-    core::{APP_CONFIG, app_config_dir, mkdir},
+    core::{APP_CONFIG, UI, app_config_dir, mkdir},
     tools::stop,
 };
 use github_proxy::Proxy;
@@ -71,6 +68,16 @@ enum Commands {
         url: String,
     },
     Update,
+
+    Ui {
+        ui: UI,
+    },
+    Host {
+        host: String,
+    },
+    Secret {
+        secret: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -103,17 +110,6 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     mkdir(app_config_dir().as_str());
-
-    // Load language preference
-    // if let Some(config_dir) = dirs::config_dir() {
-    //     let lang_file = config_dir.join("shellcrash").join("language");
-    //     if let Ok(lang_code) = std::fs::read_to_string(&lang_file)
-    //         && let Ok(lang) = crash::common::Language::from_str(lang_code.trim())
-    //     {
-    //         crash::common::set_language(lang);
-    //     }
-    // }
-
     let cli = Cli::parse();
 
     // Load configuration
@@ -156,7 +152,7 @@ async fn main() -> anyhow::Result<()> {
             };
 
             config.core.install().await;
-            config.ui.install().await;
+            config.web.ui.install().await;
             config.update_geoip().await?;
             Ok(())
         }
@@ -232,34 +228,7 @@ async fn main() -> anyhow::Result<()> {
 
             Ok(())
         }
-        Some(Commands::Status) => {
-            // use crash::scripts::ServiceManager;
 
-            // let service = ServiceManager::new(config);
-            // let status = service.get_status();
-
-            // match status {
-            //     crash::scripts::menu::ServiceStatus::Running {
-            //         pid,
-            //         uptime,
-            //         memory,
-            //         mode,
-            //     } => {
-            //         println!("服务状态: \x1b[32m运行中\x1b[0m");
-            //         println!("PID: {}", pid);
-            //         println!("运行模式: {}", mode);
-            //         println!("内存使用: {:.2} MB", memory as f64 / 1024.0);
-            //         println!("运行时长: {:?}", uptime);
-            //     }
-            //     crash::scripts::menu::ServiceStatus::Stopped => {
-            //         println!("服务状态: \x1b[31m已停止\x1b[0m");
-            //     }
-            //     crash::scripts::menu::ServiceStatus::Error(e) => {
-            //         println!("服务状态: \x1b[31m错误 - {}\x1b[0m", e);
-            //     }
-            // }
-            Ok(())
-        }
         Some(Commands::Task { action: _ }) => {
             // use crash::scripts::TaskManager;
 
@@ -357,6 +326,37 @@ async fn main() -> anyhow::Result<()> {
             config.core.update(&config.url).await;
             Ok(())
         }
-        None => Ok(()),
+        Some(Commands::Ui { ui }) => {
+            let mut config = APP_CONFIG
+                .write()
+                .map_err(|_| anyhow::anyhow!("Failed to acquire write lock for app config"))?;
+            config.web.ui = ui;
+
+            Ok(())
+        }
+        Some(Commands::Host { host }) => {
+            let mut config = APP_CONFIG
+                .write()
+                .map_err(|_| anyhow::anyhow!("Failed to acquire write lock for app config"))?;
+            config.web.host = host;
+
+            Ok(())
+        }
+        Some(Commands::Secret { secret }) => {
+            let mut config = APP_CONFIG
+                .write()
+                .map_err(|_| anyhow::anyhow!("Failed to acquire write lock for app config"))?;
+            config.web.secret = secret;
+
+            Ok(())
+        }
+        None | Some(Commands::Status) => {
+            let config = APP_CONFIG
+                .read()
+                .map_err(|_| anyhow::anyhow!("Failed to acquire write lock for app config"))?;
+            let s = config.status();
+            println!("{s}");
+            Ok(())
+        }
     }
 }

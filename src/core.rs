@@ -1,6 +1,7 @@
 use crate::{
     // common::Language,
     download::download_file,
+    tools::exec::exec,
 };
 use anyhow::Result;
 use github_proxy::{Proxy, Resource};
@@ -12,6 +13,13 @@ use strum::{Display, EnumString, IntoStaticStr};
 
 const APP_CONFIG_DIR: &str = ".crash_config";
 const APP_CONFIG_NAME: &str = "crash_config.json";
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
+pub struct Web {
+    pub ui: UI,
+    pub host: String,
+    pub secret: String,
+}
 
 #[derive(
     Debug,
@@ -95,7 +103,7 @@ pub struct CrashConfig {
     pub core: CrashCore,
     pub proxy: Proxy,
     pub target: Target,
-    pub ui: UI,
+    pub web: Web,
     pub url: String,
 }
 
@@ -155,10 +163,30 @@ impl CrashConfig {
             repo: "ShellCrash".to_string(),
             reference: "master".to_string(),
             path: format!("bin/geodata/{}", db_type),
-        }.url(&self.proxy).expect("Failed to get geo url");;
+        }
+        .url(&self.proxy)
+        .expect("Failed to get geo url");
 
         download_file(&url, &dest).await?;
         Ok(())
+    }
+
+    pub fn status(&self) -> String {
+        let mut v = vec![("version", env!("CARGO_PKG_VERSION").to_string())];
+
+        if let Ok(pid) = exec("pidof", vec![&self.core.exe_name()]) {
+            v.push(("pid", pid));
+        }
+
+        let ip = "127.0.0.1";
+        let port = self.web.host.split(":").nth(1).unwrap_or("9090");
+        v.push(("web", format!("http://{}:{}/ui", ip, port)));
+
+        let key_len = v.iter().fold(0, |a, b| a.max(b.0.len()));
+        v.iter()
+            .map(|(k, v)| format!("{:width$} : {}", k, v, width = key_len))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
 
@@ -213,24 +241,22 @@ impl CrashCore {
     pub fn name(&self) -> &'static str {
         self.into()
     }
+    pub fn exe_name(&self) -> String {
+        let ext = cfg!(target_os = "windows").then(|| ".exe").unwrap_or("");
+        format!("{}{ext}", self.name())
+    }
+
     pub fn exe_path(&self) -> String {
         let d = app_config_dir();
-        let ext = cfg!(target_os = "windows").then(|| ".exe").unwrap_or("");
-        format!("{}/{}{ext}", d, self.name())
+        format!("{}/{}", d, self.exe_name())
     }
     pub fn make_config(&self) {
         match self {
             CrashCore::Mihomo => {
                 let config_path = self.config_path();
                 if !std::fs::exists(&config_path).unwrap_or(false) {
-                    let c = APP_CONFIG.read().unwrap();
-                    let mut default_config: serde_clash::Config =
-                        serde_yaml::from_str(include_str!("./assets/mihomo.yaml"))
-                            .expect("Failed to load default config");
-
-                    default_config.external_ui = format!("./{}", c.ui.name());
-
-                    if let Ok(config_str) = serde_yaml::to_string(&default_config)
+                    if let Ok(config_str) =
+                        serde_yaml::to_string(include_str!("./assets/mihomo.yaml"))
                         && let Err(e) = std::fs::write(&config_path, config_str)
                     {
                         eprintln!("Failed to write default mihomo config: {}", e);
