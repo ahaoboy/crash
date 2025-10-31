@@ -3,5 +3,3 @@
 pub mod command;
 pub mod path;
 pub mod process;
-
-pub use command::CommandExecutor;

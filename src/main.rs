@@ -2,7 +2,8 @@
 
 use anyhow::Result;
 use clap::Parser;
-use crash::cli::{Cli, CommandHandler};
+use crash::cli::Cli;
+use crash::cli::commands::handle;
 use crash::log::{LogConfig, LogLevel, init_logger};
 use crash::{log_error, log_info};
 
@@ -28,7 +29,7 @@ async fn main() {
 
 /// Initialize the logging system
 fn init_logging() -> Result<()> {
-    let log_dir = crash::config::get_config_dir().join("logs");
+    let log_dir = crash::config::get_log_dir();
 
     let config = LogConfig {
         log_dir,
@@ -46,8 +47,6 @@ async fn run() -> Result<()> {
     let cli = Cli::parse();
 
     log_info!("Parsed CLI arguments");
-    let mut handler = CommandHandler::new();
-
-    handler.handle(cli.command).await?;
+    handle(cli.command).await?;
     Ok(())
 }

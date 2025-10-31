@@ -7,8 +7,6 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 pub mod monitor;
 use crate::platform::process::is_running;
-pub use monitor::ProcessMonitor;
-
 /// Start a process with the given executable path and arguments
 pub fn start(exe_path: &Path, args: Vec<String>) -> Result<()> {
     log_info!(

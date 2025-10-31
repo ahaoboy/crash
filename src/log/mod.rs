@@ -108,9 +108,10 @@ pub fn get_logger() -> Arc<Mutex<Option<Logger>>> {
 /// Log a message at the specified level
 pub fn log(level: LogLevel, module: &str, message: &str) {
     if let Ok(logger_guard) = LOGGER.lock()
-        && let Some(logger) = logger_guard.as_ref() {
-            logger.log(level, module, message);
-        }
+        && let Some(logger) = logger_guard.as_ref()
+    {
+        logger.log(level, module, message);
+    }
 }
 
 /// Logging macros for convenient use throughout the codebase

@@ -1,9 +1,13 @@
 // Configuration management module
 
 use crate::config::core::Core;
+use crate::download::download_file;
 use crate::error::{CrashError, Result};
-use crate::log_info;
+use crate::platform::command::execute;
+use crate::process::{restart, start, stop};
 use crate::utils::fs::{atomic_write, ensure_dir};
+use crate::utils::{current_timestamp, file_exists};
+use crate::{log_debug, log_info, log_warn};
 use github_proxy::Proxy;
 use guess_target::Target;
 use serde::{Deserialize, Serialize};
@@ -16,6 +20,7 @@ pub use web::WebConfig;
 
 const APP_CONFIG_DIR: &str = ".crash_config";
 const APP_CONFIG_NAME: &str = "crash_config.json";
+const APP_LOG_DIR: &str = "logs";
 
 /// Main configuration structure for the Crash application
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -115,6 +120,328 @@ impl CrashConfig {
     pub fn config_path(&self) -> PathBuf {
         self.config_dir.join(self.core.config_file_name())
     }
+
+    pub fn start(&mut self) -> Result<()> {
+        let mut config = CrashConfig::load()?;
+
+        log_info!("Starting proxy core: {}", config.core.name());
+
+        let exe_path = config.core.exe_path(&config.config_dir);
+
+        if !exe_path.exists() {
+            return Err(CrashError::Process(format!(
+                "Core executable not found: {}. Please run 'install' first.",
+                exe_path.display()
+            )));
+        }
+
+        let args = vec![
+            "-f".to_string(),
+            config.config_path().to_string_lossy().to_string(),
+            "-ext-ctl".to_string(),
+            config.web.host.clone(),
+            "-ext-ui".to_string(),
+            config.web.ui_name().to_string(),
+            "-d".to_string(),
+            config.config_dir.to_string_lossy().to_string(),
+        ];
+
+        start(&exe_path, args)?;
+
+        config.start_time = current_timestamp();
+        config.save()?;
+
+        log_info!("Proxy core started successfully");
+        Ok(())
+    }
+
+    /// Stop the proxy core
+    pub fn stop(&mut self) -> Result<()> {
+        let mut config = CrashConfig::load()?;
+
+        log_info!("Stopping proxy core: {}", config.core.name());
+
+        let exe_name = config.core.exe_name();
+        stop(&exe_name)?;
+
+        config.start_time = 0;
+        config.save()?;
+
+        log_info!("Proxy core stopped successfully");
+        Ok(())
+    }
+
+    /// Restart the proxy core
+    pub fn restart(&mut self) -> Result<()> {
+        log_info!("Restarting proxy core");
+
+        let config = CrashConfig::load()?;
+        let exe_name = config.core.exe_name();
+        let exe_path = config.core.exe_path(&config.config_dir);
+
+        let args = vec![
+            "-f".to_string(),
+            config.config_path().to_string_lossy().to_string(),
+            "-ext-ctl".to_string(),
+            config.web.host.clone(),
+            "-ext-ui".to_string(),
+            config.web.ui_name().to_string(),
+            "-d".to_string(),
+            config.config_dir.to_string_lossy().to_string(),
+        ];
+
+        restart(&exe_name, &exe_path, args)?;
+
+        let mut config = CrashConfig::load()?;
+
+        config.start_time = current_timestamp();
+        config.save()?;
+
+        log_info!("Proxy core restarted successfully");
+        Ok(())
+    }
+
+    /// Get the version of the installed proxy core
+    pub fn get_version(&self) -> Result<String> {
+        let config = CrashConfig::load()?;
+
+        log_debug!("Getting version for core: {}", config.core.name());
+
+        let exe_path = config.core.exe_path(&config.config_dir);
+
+        if !exe_path.exists() {
+            log_debug!("Core executable not found: {}", exe_path.display());
+            return Err(CrashError::Config("Core executable not found".to_string()));
+        }
+
+        let output = execute(exe_path.to_string_lossy().as_ref(), &["-v"])?;
+
+        // Parse version from output (format: "Mihomo version 1.19.15")
+        let Some(version) = output.split_whitespace().nth(2).map(|s| s.to_string()) else {
+            return Err(CrashError::Config("Core version not found".to_string()));
+        };
+
+        log_debug!("Core version: {:?}", version);
+        Ok(version)
+    }
+
+    /// Install the proxy core and UI
+    pub async fn install(&self, force: bool) -> Result<()> {
+        log_info!("Installing proxy core and UI (force: {})", force);
+
+        let config = CrashConfig::load()?;
+        self.ensure_default_config(&config)?;
+
+        // Install core
+        self.install_core(&config, force).await?;
+
+        // Install UI
+        self.install_ui(&config, force).await?;
+
+        // Install geo databases
+        self.install_geo_databases(&config, force).await?;
+
+        log_info!("Installation completed successfully");
+        Ok(())
+    }
+
+    /// Ensure default configuration file exists
+    fn ensure_default_config(&self, config: &CrashConfig) -> Result<()> {
+        let config_path = config.config_path();
+
+        if config_path.exists() {
+            return Ok(());
+        }
+
+        log_info!(
+            "Creating default configuration file: {}",
+            config_path.display()
+        );
+
+        // Create default Mihomo config
+        let default_config = include_str!("../assets/mihomo.yaml");
+
+        crate::utils::fs::atomic_write(&config_path, default_config)?;
+
+        Ok(())
+    }
+    pub async fn install_core(&self, config: &CrashConfig, force: bool) -> Result<()> {
+        let exe_path = config.core.exe_path(&config.config_dir);
+
+        if file_exists(&exe_path) && !force {
+            log_info!("Core already installed at {}", exe_path.display());
+            return Ok(());
+        }
+
+        log_info!("Installing proxy core: {}", config.core.name());
+
+        // Ensure config directory exists
+        ensure_dir(&config.config_dir)?;
+
+        // Get download URL
+        let resource = config.core.repo(&config.target)?;
+        let url = config
+            .proxy
+            .url(resource)
+            .ok_or_else(|| CrashError::Download("Failed to get core download URL".to_string()))?;
+
+        log_info!("Downloading core from: {}", url);
+
+        // Use easy-install to download and extract
+        let result = easy_install::run_main(easy_install::Args {
+            url,
+            dir: Some(config.config_dir.to_string_lossy().to_string()),
+            install_only: true,
+            name: vec![],
+            alias: Some(config.core.name().to_string()),
+            target: None,
+            retry: 3,
+            proxy: config.proxy,
+            timeout: 600,
+        })
+        .await;
+
+        if result.is_err() {
+            return Err(CrashError::Download(
+                "Failed to install core binary".to_string(),
+            ));
+        }
+
+        // Verify installation
+        if !file_exists(&exe_path) {
+            return Err(CrashError::Download(format!(
+                "Core binary not found after installation: {}",
+                exe_path.display()
+            )));
+        }
+
+        log_info!("Core installed successfully at {}", exe_path.display());
+        Ok(())
+    }
+
+    /// Install the web UI
+    pub async fn install_ui(&self, config: &CrashConfig, force: bool) -> Result<()> {
+        let ui_dir = config.web.ui_dir(&config.config_dir);
+
+        if ui_dir.exists() && !force {
+            log_info!("UI already installed at {}", ui_dir.display());
+            return Ok(());
+        }
+
+        log_info!("Installing web UI: {}", config.web.ui_name());
+
+        // Get download URL
+        let url = config.web.ui_url(&config.proxy)?;
+
+        log_info!("Downloading UI from: {}", url);
+
+        // Use easy-install to download and extract
+        let result = easy_install::run_main(easy_install::Args {
+            url,
+            dir: Some(ui_dir.to_string_lossy().to_string()),
+            install_only: true,
+            name: vec![],
+            alias: None,
+            target: None,
+            retry: 3,
+            proxy: config.proxy,
+            timeout: 600,
+        })
+        .await;
+
+        if result.is_err() {
+            return Err(CrashError::Download("Failed to install UI".to_string()));
+        }
+
+        // Verify installation
+        if !ui_dir.exists() {
+            return Err(CrashError::Download(format!(
+                "UI directory not found after installation: {}",
+                ui_dir.display()
+            )));
+        }
+
+        log_info!("UI installed successfully at {}", ui_dir.display());
+        Ok(())
+    }
+
+    /// Install GeoIP databases
+    pub async fn install_geo_databases(&self, config: &CrashConfig, force: bool) -> Result<()> {
+        log_info!("Installing GeoIP databases");
+
+        use crate::config::core::Core;
+
+        let databases = match config.core {
+            Core::Mihomo => vec!["geoip.metadb", "geoip.dat", "geosite.dat"],
+            Core::Clash => vec![
+                "china_ip_list.txt",
+                "china_ipv6_list.txt",
+                "cn_mini.mmdb",
+                "Country.mmdb",
+                "geoip_cn.db",
+                "geosite.dat",
+                "geosite_cn.db",
+                "mrs_geosite_cn.mrs",
+                "srs_geoip_cn.srs",
+                "srs_geosite_cn.srs",
+            ],
+            Core::Singbox => {
+                log_warn!("GeoIP database installation not implemented for Singbox");
+                return Ok(());
+            }
+        };
+
+        for db_name in databases {
+            let db_path = config.config_dir.join(db_name);
+
+            if file_exists(&db_path) && !force {
+                log_info!("Database {} already exists", db_name);
+                continue;
+            }
+
+            log_info!("Downloading GeoIP database: {}", db_name);
+
+            let url = self.get_geo_database_url(config, db_name)?;
+
+            download_file(&url, &db_path).await?;
+
+            log_info!("Downloaded {} successfully", db_name);
+        }
+
+        log_info!("GeoIP databases installed successfully");
+        Ok(())
+    }
+
+    /// Get the download URL for a GeoIP database
+    fn get_geo_database_url(&self, config: &CrashConfig, db_name: &str) -> Result<String> {
+        use crate::config::core::Core;
+        use github_proxy::Resource;
+
+        let resource = match config.core {
+            Core::Mihomo => Resource::Release {
+                owner: "MetaCubeX".to_string(),
+                repo: "meta-rules-dat".to_string(),
+                tag: "latest".to_string(),
+                name: db_name.to_string(),
+            },
+            Core::Clash => Resource::File {
+                owner: "juewuy".to_string(),
+                repo: "ShellCrash".to_string(),
+                reference: "master".to_string(),
+                path: format!("bin/geodata/{}", db_name),
+            },
+            Core::Singbox => {
+                return Err(CrashError::Config(
+                    "GeoIP databases not supported for Singbox".to_string(),
+                ));
+            }
+        };
+
+        config
+            .proxy
+            .url(resource)
+            .ok_or_else(|| CrashError::Download("Failed to get geo database URL".to_string()))
+    }
 }
 
 /// Get the configuration directory path
@@ -129,4 +456,7 @@ pub fn get_config_dir() -> PathBuf {
 /// Get the configuration file path
 pub fn get_config_path() -> PathBuf {
     get_config_dir().join(APP_CONFIG_NAME)
+}
+pub fn get_log_dir() -> PathBuf {
+    get_config_dir().join(APP_LOG_DIR)
 }

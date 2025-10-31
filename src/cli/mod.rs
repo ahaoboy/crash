@@ -2,12 +2,9 @@
 
 use clap::{Parser, Subcommand};
 use github_proxy::Proxy;
-
 pub mod commands;
 pub mod output;
-
-pub use commands::CommandHandler;
-pub use output::OutputFormatter;
+// pub use output::OutputFormatter;
 
 /// Main CLI structure
 #[derive(Parser)]

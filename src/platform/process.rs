@@ -1,13 +1,13 @@
 // Cross-platform process management abstractions
 
 use crate::error::{CrashError, Result};
-use crate::platform::command::CommandExecutor;
 use std::path::Path;
 use std::process::Command;
+    use crate::platform::command::execute;
 
 #[cfg(unix)]
 pub fn get_pid(name: &str) -> Result<u32> {
-    let output = self.executor.execute("pidof", &[name])?;
+    let output = execute("pidof", &[name])?;
 
     let pid_str = output
         .trim()
@@ -50,7 +50,7 @@ pub fn kill_process(name_or_path: &str) -> Result<()> {
 
 #[cfg(windows)]
 pub fn get_pid(name: &str) -> Result<u32> {
-    let output = CommandExecutor.execute(
+    let output = execute(
         "tasklist",
         &[
             "/FI",

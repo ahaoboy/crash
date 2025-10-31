@@ -2,289 +2,249 @@
 
 use crate::cli::Commands;
 use crate::config::CrashConfig;
-use crate::core::CoreManager;
+use crate::core::updater::{update_config, update_geo};
 use crate::error::{CrashError, Result};
-use crate::process::ProcessMonitor;
 use crate::log_info;
+use crate::process::monitor::format_status;
 use github_proxy::Proxy;
 use std::str::FromStr;
 
-/// Command handler for executing CLI commands
-pub struct CommandHandler {
-    core_manager: CoreManager,
-    monitor: ProcessMonitor,
+pub async fn handle(command: Option<Commands>) -> Result<()> {
+    match command {
+        Some(Commands::Install { force }) => handle_install(force).await,
+        Some(Commands::Proxy { proxy }) => handle_proxy(proxy),
+        Some(Commands::Start) => handle_start(),
+        Some(Commands::Stop) => handle_stop(),
+        Some(Commands::Restart) => handle_restart(),
+        Some(Commands::Status) => handle_status(),
+        Some(Commands::Task) => handle_task(),
+        Some(Commands::RunTask) => handle_run_task().await,
+        Some(Commands::Url { url }) => handle_url(url),
+        Some(Commands::UpdateUrl { force }) => handle_update_url(force).await,
+        Some(Commands::UpdateGeo { force }) => handle_update_geo(force).await,
+        Some(Commands::Update) => handle_update().await,
+        Some(Commands::Ui { ui }) => handle_ui(ui),
+        Some(Commands::Host { host }) => handle_host(host),
+        Some(Commands::Secret { secret }) => handle_secret(secret),
+        None => handle_status(),
+    }
 }
 
-impl CommandHandler {
-    /// Create a new command handler
-    pub fn new( ) -> Self {
-        let core_manager = CoreManager::new( );
+/// Handle install command
+async fn handle_install(force: bool) -> Result<()> {
+    log_info!("Executing install command (force: {})", force);
 
-        Self {
-            core_manager,
-            monitor: ProcessMonitor::new(),
-        }
-    }
+    CrashConfig::load()?.install(force).await?;
 
-    /// Handle a CLI command
-    pub async fn handle(&mut self, command: Option<Commands>) -> Result<()> {
-        match command {
-            Some(Commands::Install { force }) => self.handle_install(force).await,
-            Some(Commands::Proxy { proxy }) => self.handle_proxy(proxy),
-            Some(Commands::Start) => self.handle_start(),
-            Some(Commands::Stop) => self.handle_stop(),
-            Some(Commands::Restart) => self.handle_restart(),
-            Some(Commands::Status) => self.handle_status(),
-            Some(Commands::Task) => self.handle_task(),
-            Some(Commands::RunTask) => self.handle_run_task().await,
-            Some(Commands::Url { url }) => self.handle_url(url),
-            Some(Commands::UpdateUrl { force }) => self.handle_update_url(force).await,
-            Some(Commands::UpdateGeo { force }) => self.handle_update_geo(force).await,
-            Some(Commands::Update) => self.handle_update().await,
-            Some(Commands::Ui { ui }) => self.handle_ui(ui),
-            Some(Commands::Host { host }) => self.handle_host(host),
-            Some(Commands::Secret { secret }) => self.handle_secret(secret),
-            None => self.handle_status(),
-        }
-    }
+    println!("Installation completed successfully!");
+    Ok(())
+}
 
-    /// Handle install command
-    async fn handle_install(&mut self, force: bool) -> Result<()> {
-        log_info!("Executing install command (force: {})", force);
+/// Handle proxy command
+fn handle_proxy(proxy: Proxy) -> Result<()> {
+    log_info!("Setting proxy to: {}", proxy);
+    let mut config = CrashConfig::load()?;
 
-        self.core_manager.install(force).await?;
+    config.proxy = proxy;
+    config.save()?;
 
-        println!("Installation completed successfully!");
-        Ok(())
-    }
+    println!("Proxy set to: {}", config.proxy);
+    Ok(())
+}
 
-    /// Handle proxy command
-    fn handle_proxy(&self, proxy: Proxy) -> Result<()> {
-        log_info!("Setting proxy to: {}", proxy);
-        let mut config = CrashConfig::load()?;
+/// Handle start command
+fn handle_start() -> Result<()> {
+    log_info!("Executing start command");
 
-        config.proxy = proxy;
-        config.save()?;
+    CrashConfig::load()?.start()?;
 
-        println!("Proxy set to: {}", config.proxy);
-        Ok(())
-    }
+    println!("Proxy service started successfully!");
+    Ok(())
+}
 
-    /// Handle start command
-    fn handle_start(&mut self) -> Result<()> {
-        log_info!("Executing start command");
+/// Handle stop command
+fn handle_stop() -> Result<()> {
+    log_info!("Executing stop command");
 
-        self.core_manager.start()?;
+    CrashConfig::load()?.stop()?;
 
-        println!("Proxy service started successfully!");
-        Ok(())
-    }
+    println!("Proxy service stopped successfully!");
+    Ok(())
+}
 
-    /// Handle stop command
-    fn handle_stop(&mut self) -> Result<()> {
-        log_info!("Executing stop command");
+/// Handle restart command
+fn handle_restart() -> Result<()> {
+    log_info!("Executing restart command");
 
-        self.core_manager.stop()?;
+    CrashConfig::load()?.restart()?;
 
-        println!("Proxy service stopped successfully!");
-        Ok(())
-    }
+    println!("Proxy service restarted successfully!");
+    Ok(())
+}
 
-    /// Handle restart command
-    fn handle_restart(&mut self) -> Result<()> {
-        log_info!("Executing restart command");
+/// Handle status command
+fn handle_status() -> Result<()> {
+    log_info!("Executing status command");
+    let config = CrashConfig::load()?;
+    let status = format_status(&config);
+    println!("{}", status);
+    Ok(())
+}
 
-        self.core_manager.restart()?;
+/// Handle task command (install cron task)
+fn handle_task() -> Result<()> {
+    log_info!("Executing task command");
 
-        println!("Proxy service restarted successfully!");
-        Ok(())
-    }
+    #[cfg(unix)]
+    {
+        use crate::platform::command::execute;
 
-    /// Handle status command
-    fn handle_status(&self) -> Result<()> {
-        log_info!("Executing status command");
-
-        let config = CrashConfig::load()?;
-        let exe_name = config.core.exe_name();
-        let is_running = self.core_manager.is_running(&exe_name);
-        let pid = if is_running {
-            self.core_manager.get_pid(&exe_name).ok()
-        } else {
-            None
-        };
-
-        let status = self.monitor.format_status(&config, is_running, pid);
-        println!("{}", status);
-
-        Ok(())
-    }
-
-    /// Handle task command (install cron task)
-    fn handle_task(&self) -> Result<()> {
-        log_info!("Executing task command");
-
-        #[cfg(unix)]
-        {
-            use crate::platform::command::CommandExecutor;
-
-            let exe = std::env::current_exe().map_err(|e| {
-                CrashError::Platform(format!("Failed to get current executable path: {}", e))
-            })?;
-
-            let exe_path = exe.to_string_lossy();
-            let cmd = format!("{} run-task", exe_path);
-            let cron = "0 3 * * 3"; // Every Wednesday at 3 AM
-            let entry = format!("{} {}", cron, cmd);
-
-            let executor = CommandExecutor;
-
-            // Check if entry already exists
-            if let Ok(list) = executor.execute("crontab", &["-l"]) {
-                if list.lines().any(|line| line == entry) {
-                    println!("Scheduled task already exists");
-                    return Ok(());
-                }
-            }
-
-            // Add cron entry
-            let sh = format!("(crontab -l 2>/dev/null; echo '{}') | crontab -", entry);
-            executor.execute("bash", &["-c", &sh])?;
-
-            println!("Scheduled task installed successfully!");
-            println!("Task will run: {}", cron);
-        }
-
-        #[cfg(windows)]
-        {
-            println!("Scheduled tasks are not supported on Windows yet");
-        }
-
-        Ok(())
-    }
-
-    /// Handle run-task command
-    async fn handle_run_task(&mut self) -> Result<()> {
-        log_info!("Executing run-task command");
-
-        // Update configuration
-        self.handle_update_url(true).await?;
-
-        // Update geo databases
-        self.handle_update_geo(true).await?;
-
-        // Restart service
-        self.handle_restart()?;
-
-        println!("Scheduled task completed successfully!");
-        Ok(())
-    }
-
-    /// Handle url command
-    fn handle_url(&self, url: String) -> Result<()> {
-        log_info!("Setting configuration URL to: {}", url);
-
-        let mut config = CrashConfig::load()?;
-
-        config.url = url.clone();
-        config.save()?;
-
-        println!("Configuration URL set to: {}", url);
-        Ok(())
-    }
-
-    /// Handle update-url command
-    async fn handle_update_url(&self, force: bool) -> Result<()> {
-        log_info!("Updating configuration from URL (force: {})", force);
-
-        let (url, dest) = {
-            let config = CrashConfig::load()?;
-            if config.url.is_empty() {
-                return Err(CrashError::Config(
-                    "Configuration URL not set. Use 'url' command first.".to_string(),
-                ));
-            }
-
-            (config.url.clone(), config.config_path())
-        }; // Lock is dropped here
-
-        self.core_manager
-            .updater()
-            .update_config(&url, &dest, force)
-            .await?;
-
-        println!("Configuration updated successfully!");
-        Ok(())
-    }
-
-    /// Handle update-geo command
-    async fn handle_update_geo(&self, force: bool) -> Result<()> {
-        log_info!("Updating GeoIP databases (force: {})", force);
-
-        let config_clone = {
-            let config = CrashConfig::load()?;
-            config.clone()
-        }; // Lock is dropped here
-
-        self.core_manager
-            .updater()
-            .update_geo(&config_clone, force)
-            .await?;
-
-        println!("GeoIP databases updated successfully!");
-        Ok(())
-    }
-
-    /// Handle update command
-    async fn handle_update(&self) -> Result<()> {
-        log_info!("Updating configuration from stored URL");
-
-        self.handle_update_url(false).await
-    }
-
-    /// Handle ui command
-    fn handle_ui(&self, ui: String) -> Result<()> {
-        log_info!("Setting UI to: {}", ui);
-
-        use crate::config::web::UiType;
-
-        let ui_type = UiType::from_str(&ui).map_err(|_| {
-            CrashError::Config(format!(
-                "Invalid UI type: {}. Valid options: Metacubexd, Zashboard, Yacd",
-                ui
-            ))
+        let exe = std::env::current_exe().map_err(|e| {
+            CrashError::Platform(format!("Failed to get current executable path: {}", e))
         })?;
 
-        let mut config = CrashConfig::load()?;
-        config.web.ui = ui_type;
-        config.save()?;
+        let exe_path = exe.to_string_lossy();
+        let cmd = format!("{} run-task", exe_path);
+        let cron = "0 3 * * 3"; // Every Wednesday at 3 AM
+        let entry = format!("{} {}", cron, cmd);
 
-        println!("Web UI set to: {}", ui);
-        Ok(())
+        // Check if entry already exists
+        if let Ok(list) = execute("crontab", &["-l"]) {
+            if list.lines().any(|line| line == entry) {
+                println!("Scheduled task already exists");
+                return Ok(());
+            }
+        }
+
+        // Add cron entry
+        let sh = format!("(crontab -l 2>/dev/null; echo '{}') | crontab -", entry);
+        execute("bash", &["-c", &sh])?;
+
+        println!("Scheduled task installed successfully!");
+        println!("Task will run: {}", cron);
     }
 
-    /// Handle host command
-    fn handle_host(&self, host: String) -> Result<()> {
-        log_info!("Setting web host to: {}", host);
-
-        let mut config = CrashConfig::load()?;
-
-        config.web.host = host.clone();
-        config.save()?;
-
-        println!("Web host set to: {}", host);
-        Ok(())
+    #[cfg(windows)]
+    {
+        println!("Scheduled tasks are not supported on Windows yet");
     }
 
-    /// Handle secret command
-    fn handle_secret(&self, secret: String) -> Result<()> {
-        log_info!("Setting web secret");
+    Ok(())
+}
 
-        let mut config = CrashConfig::load()?;
+/// Handle run-task command
+async fn handle_run_task() -> Result<()> {
+    log_info!("Executing run-task command");
 
-        config.web.secret = secret;
-        config.save()?;
+    // Update configuration
+    handle_update_url(true).await?;
 
-        println!("Web secret updated successfully!");
-        Ok(())
-    }
+    // Update geo databases
+    handle_update_geo(true).await?;
+
+    // Restart service
+    handle_restart()?;
+
+    println!("Scheduled task completed successfully!");
+    Ok(())
+}
+
+/// Handle url command
+fn handle_url(url: String) -> Result<()> {
+    log_info!("Setting configuration URL to: {}", url);
+
+    let mut config = CrashConfig::load()?;
+
+    config.url = url.clone();
+    config.save()?;
+
+    println!("Configuration URL set to: {}", url);
+    Ok(())
+}
+
+/// Handle update-url command
+async fn handle_update_url(force: bool) -> Result<()> {
+    log_info!("Updating configuration from URL (force: {})", force);
+
+    let (url, dest) = {
+        let config = CrashConfig::load()?;
+        if config.url.is_empty() {
+            return Err(CrashError::Config(
+                "Configuration URL not set. Use 'url' command first.".to_string(),
+            ));
+        }
+
+        (config.url.clone(), config.config_path())
+    }; // Lock is dropped here
+
+    update_config(&url, &dest, force).await?;
+
+    println!("Configuration updated successfully!");
+    Ok(())
+}
+
+/// Handle update-geo command
+async fn handle_update_geo(force: bool) -> Result<()> {
+    log_info!("Updating GeoIP databases (force: {})", force);
+
+    let config_clone = CrashConfig::load()?;
+
+    update_geo(&config_clone, force).await?;
+
+    println!("GeoIP databases updated successfully!");
+    Ok(())
+}
+
+/// Handle update command
+async fn handle_update() -> Result<()> {
+    log_info!("Updating configuration from stored URL");
+
+    handle_update_url(false).await
+}
+
+/// Handle ui command
+fn handle_ui(ui: String) -> Result<()> {
+    log_info!("Setting UI to: {}", ui);
+
+    use crate::config::web::UiType;
+
+    let ui_type = UiType::from_str(&ui).map_err(|_| {
+        CrashError::Config(format!(
+            "Invalid UI type: {}. Valid options: Metacubexd, Zashboard, Yacd",
+            ui
+        ))
+    })?;
+
+    let mut config = CrashConfig::load()?;
+    config.web.ui = ui_type;
+    config.save()?;
+
+    println!("Web UI set to: {}", ui);
+    Ok(())
+}
+
+/// Handle host command
+fn handle_host(host: String) -> Result<()> {
+    log_info!("Setting web host to: {}", host);
+
+    let mut config = CrashConfig::load()?;
+
+    config.web.host = host.clone();
+    config.save()?;
+
+    println!("Web host set to: {}", host);
+    Ok(())
+}
+
+/// Handle secret command
+fn handle_secret(secret: String) -> Result<()> {
+    log_info!("Setting web secret");
+
+    let mut config = CrashConfig::load()?;
+
+    config.web.secret = secret;
+    config.save()?;
+
+    println!("Web secret updated successfully!");
+    Ok(())
 }
