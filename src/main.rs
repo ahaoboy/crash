@@ -150,9 +150,7 @@ async fn main() -> anyhow::Result<()> {
                     .read()
                     .map_err(|_| anyhow::anyhow!("Failed to read app config"))?
             };
-
-            config.core.install().await;
-            config.web.ui.install().await;
+            config.install().await;
             config.update_geoip().await?;
             Ok(())
         }

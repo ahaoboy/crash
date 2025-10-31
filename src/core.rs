@@ -68,29 +68,6 @@ impl UI {
             })
             .expect("Failed to get proxy url")
     }
-
-    pub async fn install(&self) -> Option<()> {
-        if std::fs::exists(self.assets_dir()).ok()? {
-            return None;
-        }
-
-        let url = self.url();
-        easy_install::run_main(easy_install::Args {
-            url,
-            dir: Some(self.assets_dir()),
-            install_only: true,
-            name: vec![],
-            alias: None,
-            target: None,
-            retry: 3,
-            proxy: Proxy::Github,
-            timeout: 600,
-        })
-        .await
-        .ok()?;
-
-        None
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
@@ -188,6 +165,61 @@ impl CrashConfig {
             .collect::<Vec<_>>()
             .join("\n")
     }
+
+    pub async fn install(&self) -> Option<()> {
+        self.install_ui().await;
+        self.install_core().await;
+        Some(())
+    }
+    pub async fn install_ui(&self) -> Option<()> {
+        if std::fs::exists(self.web.ui.assets_dir()).ok()? {
+            return None;
+        }
+        let url = self.web.ui.url();
+        easy_install::run_main(easy_install::Args {
+            url,
+            dir: Some(self.web.ui.assets_dir()),
+            install_only: true,
+            name: vec![],
+            alias: None,
+            target: None,
+            retry: 3,
+            proxy: self.proxy,
+            timeout: 600,
+        })
+        .await
+        .ok()?;
+
+        None
+    }
+
+    pub async fn install_core(&self) -> Option<()> {
+        self.core.make_config();
+
+        if std::fs::exists(self.core.exe_path()).ok()? {
+            return None;
+        }
+
+        let config = APP_CONFIG.read().ok()?;
+
+        mkdir(&config.config_dir);
+
+        let url = self.core.core_url();
+        easy_install::run_main(easy_install::Args {
+            url,
+            dir: Some(config.config_dir.clone()),
+            install_only: true,
+            name: vec![],
+            alias: Some(self.core.name().to_string()),
+            target: None,
+            retry: 3,
+            proxy: self.proxy,
+            timeout: 600,
+        })
+        .await
+        .ok()?;
+        None
+    }
 }
 
 pub fn app_config_dir() -> String {
@@ -267,34 +299,6 @@ impl CrashCore {
                 todo!()
             }
         }
-    }
-
-    pub async fn install(&self) -> Option<()> {
-        self.make_config();
-
-        if std::fs::exists(self.exe_path()).ok()? {
-            return None;
-        }
-
-        let config = APP_CONFIG.read().ok()?;
-
-        mkdir(&config.config_dir);
-
-        let url = self.core_url();
-        easy_install::run_main(easy_install::Args {
-            url,
-            dir: Some(config.config_dir.clone()),
-            install_only: true,
-            name: vec![],
-            alias: Some(self.name().to_string()),
-            target: None,
-            retry: 3,
-            proxy: Proxy::Github,
-            timeout: 600,
-        })
-        .await
-        .ok()?;
-        None
     }
 
     pub fn release_file_name(&self) -> String {
