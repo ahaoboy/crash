@@ -12,7 +12,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Install,
+    Install {
+        #[arg(short, long, default_value_t = false)]
+        force: bool,
+    },
 
     Proxy {
         proxy: Proxy,
@@ -66,14 +69,14 @@ async fn main() -> anyhow::Result<()> {
             config.save()?;
             Ok(())
         }
-        Some(Commands::Install) => {
+        Some(Commands::Install { force }) => {
             let config = {
                 APP_CONFIG
                     .read()
                     .map_err(|_| anyhow::anyhow!("Failed to read app config"))?
             };
-            config.install().await;
-            config.update_geoip().await?;
+            config.install(force).await;
+            config.update_geoip(force).await?;
             Ok(())
         }
         Some(Commands::Proxy { proxy }) => {

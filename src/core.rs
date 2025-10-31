@@ -131,12 +131,11 @@ impl CrashConfig {
         let cmd = format!("{} update-url", exe_path);
         let s = format!("{} {}", cron, cmd);
 
-        if let Ok(list) = exec("crontab", vec!["-l"]) {
-            if list.lines().find(|line| line == &s).is_none() {
+        if let Ok(list) = exec("crontab", vec!["-l"])
+            && !list.lines().any(|line| &line == &s) {
                 let sh = format!("(crontab -l 2>/dev/null; echo '{}') | crontab -", s);
                 exec("bash", vec!["-c", &sh])?;
             }
-        }
         Ok(())
     }
 
@@ -175,7 +174,7 @@ impl CrashConfig {
     }
 
     /// Update GeoIP database
-    pub async fn update_geoip(&self) -> Result<()> {
+    pub async fn update_geoip(&self, force: bool) -> Result<()> {
         let databases = vec![
             "china_ip_list.txt",
             "china_ipv6_list.txt",
@@ -191,7 +190,7 @@ impl CrashConfig {
 
         for db in databases {
             let db_path = format!("{}/{}", self.config_dir, db);
-            if !std::fs::exists(db_path).unwrap_or(false) {
+            if !std::fs::exists(db_path).unwrap_or(false) && !force {
                 self.download_geoip(db).await?;
             }
         }
@@ -259,13 +258,13 @@ impl CrashConfig {
             .join("\n")
     }
 
-    pub async fn install(&self) -> Option<()> {
-        self.install_ui().await;
-        self.install_core().await;
+    pub async fn install(&self, force: bool) -> Option<()> {
+        self.install_ui(force).await;
+        self.install_core(force).await;
         Some(())
     }
-    pub async fn install_ui(&self) -> Option<()> {
-        if std::fs::exists(self.web.ui.assets_dir()).ok()? {
+    pub async fn install_ui(&self, force: bool) -> Option<()> {
+        if std::fs::exists(self.web.ui.assets_dir()).ok()? && !force {
             return None;
         }
         let url = self.web.ui.url();
@@ -286,10 +285,10 @@ impl CrashConfig {
         None
     }
 
-    pub async fn install_core(&self) -> Option<()> {
+    pub async fn install_core(&self, force: bool) -> Option<()> {
         self.core.make_config();
 
-        if std::fs::exists(self.core.exe_path()).ok()? {
+        if std::fs::exists(self.core.exe_path()).ok()? && !force {
             return None;
         }
 
