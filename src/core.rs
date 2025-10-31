@@ -336,7 +336,7 @@ impl CrashConfig {
 
         if let Ok(ip) = local_ip_address::local_ip() {
             let port = self.web.host.split(":").nth(1).unwrap_or("9090");
-            v.push(("web", format!("http://{}:{}/ui", ip, port)));
+            v.push(("web", format!("{}(http://{}:{}/ui)", self.web.ui, ip, port)));
         }
 
         if let Some(memory) = exec(
