@@ -196,9 +196,8 @@ impl CrashConfig {
             CrashCore::Mihomo => {
                 let config_path = self.config_path();
                 if !std::fs::exists(&config_path).unwrap_or(false)
-                    && let Ok(config_str) =
-                        serde_yaml::to_string(include_str!("./assets/mihomo.yaml"))
-                    && let Err(e) = std::fs::write(&config_path, config_str)
+                    && let Err(e) =
+                        std::fs::write(&config_path, include_str!("./assets/mihomo.yaml"))
                 {
                     eprintln!("Failed to write default mihomo config: {}", e);
                 }
