@@ -18,11 +18,21 @@ use strum::{Display, EnumString, IntoStaticStr};
 const APP_CONFIG_DIR: &str = ".crash_config";
 const APP_CONFIG_NAME: &str = "crash_config.json";
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct Web {
     pub ui: UI,
     pub host: String,
     pub secret: String,
+}
+
+impl Default for Web {
+    fn default() -> Self {
+        Self {
+            ui: Default::default(),
+            host: ":9090".to_string(),
+            secret: Default::default(),
+        }
+    }
 }
 
 #[derive(
