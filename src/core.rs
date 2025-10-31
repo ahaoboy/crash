@@ -9,6 +9,7 @@ use guess_target::Target;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{
+    process::Stdio,
     sync::RwLock,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -111,6 +112,9 @@ impl CrashConfig {
         c.save()?;
         Ok(c)
     }
+    pub fn config_path(&self) -> String {
+        format!("{}/{}", self.config_dir, self.core.config_file_name())
+    }
 
     pub fn is_running(&self) -> bool {
         self.get_pid().is_ok()
@@ -123,6 +127,14 @@ impl CrashConfig {
         self.start()?;
         Ok(())
     }
+    pub async fn update(&self, url: &str) -> Option<()> {
+        let dest = self.config_path();
+        if std::fs::exists(&dest).unwrap_or(false) {
+            return Some(());
+        }
+        download_file(url, &dest).await.ok()?;
+        Some(())
+    }
 
     pub fn install_task(&self) -> anyhow::Result<()> {
         let cron = "0 3 * * 3";
@@ -132,7 +144,7 @@ impl CrashConfig {
         let s = format!("{} {}", cron, cmd);
 
         if let Ok(list) = exec("crontab", vec!["-l"])
-            && !list.lines().any(|line| &line == &s)
+            && !list.lines().any(|line| line == s)
         {
             let sh = format!("(crontab -l 2>/dev/null; echo '{}') | crontab -", s);
             exec("bash", vec!["-c", &sh])?;
@@ -140,8 +152,12 @@ impl CrashConfig {
         Ok(())
     }
 
-    pub async fn update_url(&self) -> anyhow::Result<()> {
-        download_file(&self.url, &self.core.config_path()).await?;
+    pub async fn update_url(&self, force: bool) -> anyhow::Result<()> {
+        let dest = self.config_path();
+        if std::fs::exists(&dest).unwrap_or(false) && !force {
+            return Ok(());
+        }
+        download_file(&self.url, &dest).await?;
         Ok(())
     }
 
@@ -162,56 +178,99 @@ impl CrashConfig {
     pub fn start(&mut self) -> anyhow::Result<()> {
         let v = vec![
             "-f".to_string(),
-            self.core.config_path(),
+            self.config_path(),
             "-ext-ctl".to_string(),
             self.web.host.clone(),
             "-ext-ui".to_string(),
             self.web.ui.name().to_string(),
+            "-d".to_string(),
+            self.config_dir.to_string(),
         ];
         self.core.run(v);
         self.start_time = now();
         self.save()?;
         Ok(())
     }
-
-    /// Update GeoIP database
-    pub async fn update_geoip(&self, force: bool) -> Result<()> {
-        let databases = vec![
-            "china_ip_list.txt",
-            "china_ipv6_list.txt",
-            "cn_mini.mmdb",
-            "Country.mmdb",
-            "geoip_cn.db",
-            "geosite.dat",
-            "geosite_cn.db",
-            "mrs_geosite_cn.mrs",
-            "srs_geoip_cn.srs",
-            "srs_geosite_cn.srs",
-        ];
-
-        for db in databases {
-            let db_path = format!("{}/{}", self.config_dir, db);
-            if !std::fs::exists(db_path).unwrap_or(false) && !force {
-                self.download_geoip(db).await?;
+    pub fn make_config(&self) {
+        match self.core {
+            CrashCore::Mihomo => {
+                let config_path = self.config_path();
+                if !std::fs::exists(&config_path).unwrap_or(false)
+                    && let Ok(config_str) =
+                        serde_yaml::to_string(include_str!("./assets/mihomo.yaml"))
+                    && let Err(e) = std::fs::write(&config_path, config_str)
+                {
+                    eprintln!("Failed to write default mihomo config: {}", e);
+                }
+            }
+            _ => {
+                todo!()
             }
         }
-        Ok(())
     }
 
-    pub async fn download_geoip(&self, db_type: &str) -> Result<()> {
-        let dest = format!("{}/{}", self.config_dir, db_type);
-        let url = Resource::File {
-            owner: "juewuy".to_string(),
-            repo: "ShellCrash".to_string(),
-            reference: "master".to_string(),
-            path: format!("bin/geodata/{}", db_type),
+    pub fn core_url(&self) -> String {
+        self.proxy
+            .url(self.core.repo())
+            .expect("Failed to get core url")
+    }
+
+    /// Update GeoIP database
+    pub async fn update_geo(&self, force: bool) -> Result<()> {
+        match self.core {
+            CrashCore::Clash => {
+                let databases = vec![
+                    "china_ip_list.txt",
+                    "china_ipv6_list.txt",
+                    "cn_mini.mmdb",
+                    "Country.mmdb",
+                    "geoip_cn.db",
+                    "geosite.dat",
+                    "geosite_cn.db",
+                    "mrs_geosite_cn.mrs",
+                    "srs_geoip_cn.srs",
+                    "srs_geosite_cn.srs",
+                ];
+
+                for db in databases {
+                    let db_path = format!("{}/{}", self.config_dir, db);
+                    if !std::fs::exists(db_path).unwrap_or(false) || force {
+                        let dest = format!("{}/{}", self.config_dir, db);
+                        let url = Resource::File {
+                            owner: "juewuy".to_string(),
+                            repo: "ShellCrash".to_string(),
+                            reference: "master".to_string(),
+                            path: format!("bin/geodata/{}", db),
+                        }
+                        .url(&self.proxy)
+                        .expect("Failed to get geo url");
+                        download_file(&url, &dest).await?;
+                    }
+                }
+            }
+            CrashCore::Mihomo => {
+                let databases = vec!["geoip.metadb", "geoip.dat", "geosite.dat"];
+                for db in databases {
+                    let db_path = format!("{}/{}", self.config_dir, db);
+                    if !std::fs::exists(db_path).unwrap_or(false) || force {
+                        let dest = format!("{}/{}", self.config_dir, db);
+                        let url = Resource::Release {
+                            owner: "MetaCubeX".to_string(),
+                            repo: "meta-rules-dat".to_string(),
+                            tag: "latest".to_string(),
+                            name: db.to_string(),
+                        }
+                        .url(&self.proxy)
+                        .expect("Failed to get geo url");
+                        download_file(&url, &dest).await?;
+                    }
+                }
+            }
+            _ => todo!(),
         }
-        .url(&self.proxy)
-        .expect("Failed to get geo url");
-
-        download_file(&url, &dest).await?;
         Ok(())
     }
+
     pub fn get_pid(&self) -> anyhow::Result<String> {
         exec("pidof", vec![&self.core.exe_name()])
     }
@@ -229,7 +288,7 @@ impl CrashConfig {
         ];
 
         if let Ok(pid) = self.get_pid()
-            && pid.trim().len() > 0
+            && !pid.trim().is_empty()
         {
             v.push(("pid", pid.trim().to_string()));
         }
@@ -263,6 +322,7 @@ impl CrashConfig {
     }
 
     pub async fn install(&self, force: bool) -> Option<()> {
+        self.make_config();
         self.install_ui(force).await;
         self.install_core(force).await;
         Some(())
@@ -290,8 +350,6 @@ impl CrashConfig {
     }
 
     pub async fn install_core(&self, force: bool) -> Option<()> {
-        self.core.make_config();
-
         if std::fs::exists(self.core.exe_path()).ok()? && !force {
             return None;
         }
@@ -300,7 +358,7 @@ impl CrashConfig {
 
         mkdir(&config.config_dir);
 
-        let url = self.core.core_url();
+        let url = self.core_url();
         easy_install::run_main(easy_install::Args {
             url,
             dir: Some(config.config_dir.clone()),
@@ -378,23 +436,6 @@ impl CrashCore {
         let d = app_config_dir();
         format!("{}/{}", d, self.exe_name())
     }
-    pub fn make_config(&self) {
-        match self {
-            CrashCore::Mihomo => {
-                let config_path = self.config_path();
-                if !std::fs::exists(&config_path).unwrap_or(false)
-                    && let Ok(config_str) =
-                        serde_yaml::to_string(include_str!("./assets/mihomo.yaml"))
-                    && let Err(e) = std::fs::write(&config_path, config_str)
-                {
-                    eprintln!("Failed to write default mihomo config: {}", e);
-                }
-            }
-            _ => {
-                todo!()
-            }
-        }
-    }
 
     pub fn release_file_name(&self) -> String {
         use CrashCore::*;
@@ -425,15 +466,12 @@ impl CrashCore {
         }
     }
 
-    pub fn core_url(&self) -> String {
-        let c = APP_CONFIG.read().unwrap();
-        c.proxy.url(self.repo()).expect("Failed to get core url")
-    }
-
     pub fn run(&self, args: Vec<String>) -> Option<()> {
         let exe_path = self.exe_path();
         std::process::Command::new(exe_path)
             .args(args)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .spawn()
             .ok()?;
         Some(())
@@ -455,19 +493,5 @@ impl CrashCore {
 
     pub fn config_file_name(&self) -> String {
         format!("{}.yaml", self.name())
-    }
-
-    pub fn config_path(&self) -> String {
-        let c = APP_CONFIG.read().unwrap();
-        format!("{}/{}", c.config_dir, self.config_file_name())
-    }
-
-    pub async fn update(&self, url: &str) -> Option<()> {
-        let dest = self.config_path();
-        if std::fs::exists(&dest).unwrap_or(false) {
-            return Some(());
-        }
-        download_file(url, &dest).await.ok()?;
-        Some(())
     }
 }

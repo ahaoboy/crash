@@ -40,7 +40,14 @@ enum Commands {
         url: String,
     },
 
-    UpdateUrl,
+    UpdateUrl {
+        #[arg(short, long, default_value_t = false)]
+        force: bool,
+    },
+    UpdateGeo {
+        #[arg(short, long, default_value_t = false)]
+        force: bool,
+    },
 
     Update,
 
@@ -76,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
                     .map_err(|_| anyhow::anyhow!("Failed to read app config"))?
             };
             config.install(force).await;
-            config.update_geoip(force).await?;
+            config.update_geo(force).await?;
             Ok(())
         }
         Some(Commands::Proxy { proxy }) => {
@@ -88,15 +95,22 @@ async fn main() -> anyhow::Result<()> {
             config.save()?;
             Ok(())
         }
-        Some(Commands::UpdateUrl) => {
+        Some(Commands::UpdateUrl { force }) => {
             let mut config = APP_CONFIG
                 .write()
                 .map_err(|_| anyhow::anyhow!("Failed to acquire write lock for app config"))?;
-            config.update_url().await?;
+            config.update_url(force).await?;
             config.restart()?;
             Ok(())
         }
-
+        Some(Commands::UpdateGeo { force }) => {
+            let mut config = APP_CONFIG
+                .write()
+                .map_err(|_| anyhow::anyhow!("Failed to acquire write lock for app config"))?;
+            config.update_geo(force).await?;
+            config.restart()?;
+            Ok(())
+        }
         Some(Commands::Start) => {
             let mut config = APP_CONFIG
                 .write()
@@ -131,7 +145,7 @@ async fn main() -> anyhow::Result<()> {
                 .read()
                 .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
 
-            config.core.update(&config.url).await;
+            config.update(&config.url).await;
             Ok(())
         }
         Some(Commands::Ui { ui }) => {
