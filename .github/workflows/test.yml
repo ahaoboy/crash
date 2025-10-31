@@ -1,0 +1,41 @@
+name: Test
+
+permissions:
+  contents: write
+
+on: [push]
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -CeEuo pipefail {0}
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: cargo test
+        run: |
+          cargo test
+
+      - name: cargo install
+        run: |
+          cargo install --path .
+      - name: run
+        run: |
+          crash install
+          crash start
+          crash
+          crash stop
+          crash
