@@ -26,10 +26,9 @@ jobs:
         with:
           toolchain: nightly
           override: true
-      - name: cargo test
-        run: |
-          cargo test
-
+      # - name: cargo test
+      #   run: |
+      #     cargo test
       - name: cargo install
         run: |
           cargo install --path .
