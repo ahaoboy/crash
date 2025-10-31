@@ -1,10 +1,11 @@
 // Core management module for proxy cores
 
-use crate::config::{ConfigHandle, CrashConfig};
+use crate::config::CrashConfig;
 use crate::download::DownloadManager;
 use crate::error::{CrashError, Result};
 use crate::platform::command::CommandExecutor;
-use crate::process::ProcessController;
+use crate::platform::process::{get_pid, is_running};
+use crate::process::{restart, start, stop};
 use crate::utils::time::current_timestamp;
 use crate::{log_debug, log_info};
 
@@ -17,20 +18,16 @@ pub use updater::Updater;
 
 /// Core manager for managing proxy core lifecycle
 pub struct CoreManager {
-    config: ConfigHandle,
-    process_controller: ProcessController,
     installer: Installer,
     updater: Updater,
 }
 
 impl CoreManager {
     /// Create a new core manager
-    pub fn new(config: ConfigHandle) -> Self {
+    pub fn new() -> Self {
         let download_manager = DownloadManager::default();
 
         Self {
-            config,
-            process_controller: ProcessController::new(),
             installer: Installer::new(download_manager.clone()),
             updater: Updater::new(download_manager),
         }
@@ -38,9 +35,7 @@ impl CoreManager {
 
     /// Start the proxy core
     pub fn start(&mut self) -> Result<()> {
-        let mut config = self.config.write().map_err(|_| {
-            CrashError::Config("Failed to acquire write lock on config".to_string())
-        })?;
+        let mut config = CrashConfig::load()?;
 
         log_info!("Starting proxy core: {}", config.core.name());
 
@@ -64,7 +59,7 @@ impl CoreManager {
             config.config_dir.to_string_lossy().to_string(),
         ];
 
-        self.process_controller.start(&exe_path, args)?;
+        start(&exe_path, args)?;
 
         config.start_time = current_timestamp();
         config.save()?;
@@ -75,14 +70,12 @@ impl CoreManager {
 
     /// Stop the proxy core
     pub fn stop(&mut self) -> Result<()> {
-        let mut config = self.config.write().map_err(|_| {
-            CrashError::Config("Failed to acquire write lock on config".to_string())
-        })?;
+        let mut config = CrashConfig::load()?;
 
         log_info!("Stopping proxy core: {}", config.core.name());
 
         let exe_name = config.core.exe_name();
-        self.process_controller.stop(&exe_name)?;
+        stop(&exe_name)?;
 
         config.start_time = 0;
         config.save()?;
@@ -95,11 +88,7 @@ impl CoreManager {
     pub fn restart(&mut self) -> Result<()> {
         log_info!("Restarting proxy core");
 
-        let config = self
-            .config
-            .read()
-            .map_err(|_| CrashError::Config("Failed to acquire read lock on config".to_string()))?;
-
+        let config = CrashConfig::load()?;
         let exe_name = config.core.exe_name();
         let exe_path = config.core.exe_path(&config.config_dir);
 
@@ -116,12 +105,9 @@ impl CoreManager {
 
         drop(config); // Release read lock before acquiring write lock
 
-        self.process_controller
-            .restart(&exe_name, &exe_path, args)?;
+        restart(&exe_name, &exe_path, args)?;
 
-        let mut config = self.config.write().map_err(|_| {
-            CrashError::Config("Failed to acquire write lock on config".to_string())
-        })?;
+        let mut config = CrashConfig::load()?;
 
         config.start_time = current_timestamp();
         config.save()?;
@@ -131,8 +117,8 @@ impl CoreManager {
     }
 
     /// Get the version of the installed proxy core
-    pub fn get_version(&self) -> Option<String> {
-        let config = self.config.read().ok()?;
+    pub fn get_version(&self) -> Result<String> {
+        let config = CrashConfig::load()?;
 
         log_debug!("Getting version for core: {}", config.core.name());
 
@@ -140,17 +126,18 @@ impl CoreManager {
 
         if !exe_path.exists() {
             log_debug!("Core executable not found: {}", exe_path.display());
-            return None;
+            return Err(CrashError::Config("Core executable not found".to_string()));
         }
 
-        let executor = CommandExecutor;
-        let output = executor.execute(exe_path.to_str()?, &["-v"]).ok()?;
+        let output = CommandExecutor.execute(exe_path.to_string_lossy().as_ref(), &["-v"])?;
 
         // Parse version from output (format: "Mihomo version 1.19.15")
-        let version = output.split_whitespace().nth(2).map(|s| s.to_string());
+        let Some(version) = output.split_whitespace().nth(2).map(|s| s.to_string()) else {
+            return Err(CrashError::Config("Core version not found".to_string()));
+        };
 
         log_debug!("Core version: {:?}", version);
-        version
+        Ok(version)
     }
 
     /// Install the proxy core and UI
@@ -158,10 +145,7 @@ impl CoreManager {
         log_info!("Installing proxy core and UI (force: {})", force);
 
         let config_clone = {
-            let config = self
-                .config
-                .read()
-                .map_err(|_| CrashError::Config("Failed to acquire read lock on config".to_string()))?;
+            let config = CrashConfig::load()?;
 
             // Ensure default config file exists
             self.ensure_default_config(&config)?;
@@ -176,7 +160,9 @@ impl CoreManager {
         self.installer.install_ui(&config_clone, force).await?;
 
         // Install geo databases
-        self.installer.install_geo_databases(&config_clone, force).await?;
+        self.installer
+            .install_geo_databases(&config_clone, force)
+            .await?;
 
         log_info!("Installation completed successfully");
         Ok(())
@@ -215,11 +201,11 @@ impl CoreManager {
 
     /// Check if the process is running
     pub fn is_running(&self, exe_name: &str) -> bool {
-        self.process_controller.is_running(exe_name)
+        is_running(exe_name)
     }
 
     /// Get the process ID
     pub fn get_pid(&self, exe_name: &str) -> Result<u32> {
-        self.process_controller.get_pid(exe_name)
+        get_pid(exe_name)
     }
 }

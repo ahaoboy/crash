@@ -1,9 +1,8 @@
 // Main entry point for the Crash application
 
+use anyhow::Result;
 use clap::Parser;
 use crash::cli::{Cli, CommandHandler};
-use crash::config::create_config_handle;
-use anyhow::Result;
 use crash::log::{LogConfig, LogLevel, init_logger};
 use crash::{log_error, log_info};
 
@@ -44,21 +43,11 @@ fn init_logging() -> Result<()> {
 
 /// Main application logic
 async fn run() -> Result<()> {
-    // Parse CLI arguments
     let cli = Cli::parse();
 
     log_info!("Parsed CLI arguments");
+    let mut handler = CommandHandler::new();
 
-    // Load configuration
-    let config = create_config_handle()?;
-
-    log_info!("Configuration loaded successfully");
-
-    // Create command handler
-    let mut handler = CommandHandler::new(config);
-
-    // Execute command
     handler.handle(cli.command).await?;
-
     Ok(())
 }

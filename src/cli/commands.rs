@@ -1,7 +1,7 @@
 // Command handler implementations
 
 use crate::cli::Commands;
-use crate::config::ConfigHandle;
+use crate::config::CrashConfig;
 use crate::core::CoreManager;
 use crate::error::{CrashError, Result};
 use crate::process::ProcessMonitor;
@@ -11,18 +11,16 @@ use std::str::FromStr;
 
 /// Command handler for executing CLI commands
 pub struct CommandHandler {
-    config: ConfigHandle,
     core_manager: CoreManager,
     monitor: ProcessMonitor,
 }
 
 impl CommandHandler {
     /// Create a new command handler
-    pub fn new(config: ConfigHandle) -> Self {
-        let core_manager = CoreManager::new(config.clone());
+    pub fn new( ) -> Self {
+        let core_manager = CoreManager::new( );
 
         Self {
-            config,
             core_manager,
             monitor: ProcessMonitor::new(),
         }
@@ -63,10 +61,7 @@ impl CommandHandler {
     /// Handle proxy command
     fn handle_proxy(&self, proxy: Proxy) -> Result<()> {
         log_info!("Setting proxy to: {}", proxy);
-
-        let mut config = self.config.write().map_err(|_| {
-            CrashError::Config("Failed to acquire write lock on config".to_string())
-        })?;
+        let mut config = CrashConfig::load()?;
 
         config.proxy = proxy;
         config.save()?;
@@ -109,11 +104,7 @@ impl CommandHandler {
     fn handle_status(&self) -> Result<()> {
         log_info!("Executing status command");
 
-        let config = self
-            .config
-            .read()
-            .map_err(|_| CrashError::Config("Failed to acquire read lock on config".to_string()))?;
-
+        let config = CrashConfig::load()?;
         let exe_name = config.core.exe_name();
         let is_running = self.core_manager.is_running(&exe_name);
         let pid = if is_running {
@@ -192,9 +183,7 @@ impl CommandHandler {
     fn handle_url(&self, url: String) -> Result<()> {
         log_info!("Setting configuration URL to: {}", url);
 
-        let mut config = self.config.write().map_err(|_| {
-            CrashError::Config("Failed to acquire write lock on config".to_string())
-        })?;
+        let mut config = CrashConfig::load()?;
 
         config.url = url.clone();
         config.save()?;
@@ -208,11 +197,7 @@ impl CommandHandler {
         log_info!("Updating configuration from URL (force: {})", force);
 
         let (url, dest) = {
-            let config = self
-                .config
-                .read()
-                .map_err(|_| CrashError::Config("Failed to acquire read lock on config".to_string()))?;
-
+            let config = CrashConfig::load()?;
             if config.url.is_empty() {
                 return Err(CrashError::Config(
                     "Configuration URL not set. Use 'url' command first.".to_string(),
@@ -236,11 +221,7 @@ impl CommandHandler {
         log_info!("Updating GeoIP databases (force: {})", force);
 
         let config_clone = {
-            let config = self
-                .config
-                .read()
-                .map_err(|_| CrashError::Config("Failed to acquire read lock on config".to_string()))?;
-
+            let config = CrashConfig::load()?;
             config.clone()
         }; // Lock is dropped here
 
@@ -273,10 +254,7 @@ impl CommandHandler {
             ))
         })?;
 
-        let mut config = self.config.write().map_err(|_| {
-            CrashError::Config("Failed to acquire write lock on config".to_string())
-        })?;
-
+        let mut config = CrashConfig::load()?;
         config.web.ui = ui_type;
         config.save()?;
 
@@ -288,9 +266,7 @@ impl CommandHandler {
     fn handle_host(&self, host: String) -> Result<()> {
         log_info!("Setting web host to: {}", host);
 
-        let mut config = self.config.write().map_err(|_| {
-            CrashError::Config("Failed to acquire write lock on config".to_string())
-        })?;
+        let mut config = CrashConfig::load()?;
 
         config.web.host = host.clone();
         config.save()?;
@@ -303,9 +279,7 @@ impl CommandHandler {
     fn handle_secret(&self, secret: String) -> Result<()> {
         log_info!("Setting web secret");
 
-        let mut config = self.config.write().map_err(|_| {
-            CrashError::Config("Failed to acquire write lock on config".to_string())
-        })?;
+        let mut config = CrashConfig::load()?;
 
         config.web.secret = secret;
         config.save()?;

@@ -5,4 +5,3 @@ pub mod path;
 pub mod process;
 
 pub use command::CommandExecutor;
-pub use process::{ProcessManager, get_process_manager};

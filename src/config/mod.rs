@@ -8,7 +8,6 @@ use github_proxy::Proxy;
 use guess_target::Target;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
 
 pub mod core;
 pub mod web;
@@ -130,13 +129,4 @@ pub fn get_config_dir() -> PathBuf {
 /// Get the configuration file path
 pub fn get_config_path() -> PathBuf {
     get_config_dir().join(APP_CONFIG_NAME)
-}
-
-/// Global configuration instance
-pub type ConfigHandle = Arc<RwLock<CrashConfig>>;
-
-/// Create a new configuration handle
-pub fn create_config_handle() -> Result<ConfigHandle> {
-    let config = CrashConfig::load()?;
-    Ok(Arc::new(RwLock::new(config)))
 }
