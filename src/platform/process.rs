@@ -1,11 +1,24 @@
 // Cross-platform process management abstractions
 
 use crate::error::{CrashError, Result};
+use crate::platform::command::execute;
 use std::path::Path;
 use std::process::Command;
-    use crate::platform::command::execute;
 
-#[cfg(unix)]
+#[cfg(target_os = "macos")]
+pub fn get_pid(name: &str) -> Result<u32> {
+    let output = execute("pgrep", vec!["-x", name])?;
+
+    let pid = output
+        .trim()
+        .split_whitespace()
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("no pid output"))?
+        .parse()?;
+    Ok(pid)
+}
+
+#[cfg(target_os = "linux")]
 pub fn get_pid(name: &str) -> Result<u32> {
     let output = execute("pidof", &[name])?;
 
