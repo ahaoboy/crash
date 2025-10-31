@@ -64,6 +64,7 @@ pub fn now() -> u64 {
 
 #[cfg(unix)]
 pub fn get_pid(name: &str) -> anyhow::Result<u64> {
+    use anyhow::Context;
     let s = exec("pidof", vec![name])?;
     let pid = s
         .trim()
