@@ -273,6 +273,7 @@ impl CrashConfig {
     pub fn status(&self) -> String {
         let mut v = vec![
             ("version", env!("CARGO_PKG_VERSION").to_string()),
+            ("core", self.core.to_string()),
             (
                 "status",
                 if self.get_pid().is_ok() {
