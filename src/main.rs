@@ -3,7 +3,7 @@
 use clap::Parser;
 use crash::cli::{Cli, CommandHandler};
 use crash::config::create_config_handle;
-use crash::error::Result;
+use anyhow::Result;
 use crash::log::{LogConfig, LogLevel, init_logger};
 use crash::{log_error, log_info};
 
