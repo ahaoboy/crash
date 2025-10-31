@@ -79,12 +79,11 @@ pub fn get_pid(name: &str) -> anyhow::Result<u64> {
 pub fn get_pid(name: &str) -> anyhow::Result<u64> {
     let output = exec("tasklist", vec!["/FI", &format!("IMAGENAME eq {name}")])?;
     for line in output.lines() {
-        if line.to_lowercase().starts_with(&name.to_lowercase()) {
-            if let Some(pid_str) = line.split_whitespace().nth(1) {
-                if let Ok(pid) = pid_str.parse::<u64>() {
-                    return Ok(pid);
-                }
-            }
+        if line.to_lowercase().starts_with(&name.to_lowercase())
+            && let Some(pid_str) = line.split_whitespace().nth(1)
+            && let Ok(pid) = pid_str.parse::<u64>()
+        {
+            return Ok(pid);
         }
     }
 
@@ -249,6 +248,16 @@ impl CrashConfig {
             .expect("Failed to get core url")
     }
 
+    pub fn core_version(&self) -> Option<String> {
+        match self.core {
+            CrashCore::Mihomo => {
+                let s = exec(self.core.exe_path(), vec!["-v"]).ok()?;
+                println!("-v {}", s);
+                s.split_whitespace().nth(2).map(|s| s.to_string())
+            }
+            _ => None,
+        }
+    }
     /// Update GeoIP database
     pub async fn update_geo(&self, force: bool) -> Result<()> {
         match self.core {
@@ -306,9 +315,14 @@ impl CrashConfig {
     }
 
     pub fn status(&self) -> String {
+        let core_status = if let Some(version) = self.core_version() {
+            format!("{}({})", self.core, version)
+        } else {
+            self.core.to_string()
+        };
         let mut v = vec![
             ("version", env!("CARGO_PKG_VERSION").to_string()),
-            ("core", self.core.to_string()),
+            ("core", core_status),
             (
                 "status",
                 if get_pid(&self.core.exe_name()).is_ok() {
