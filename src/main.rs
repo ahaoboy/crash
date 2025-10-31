@@ -1,9 +1,5 @@
 use clap::{Parser, Subcommand};
-use crash::{
-    // Config,
-    core::{APP_CONFIG, UI, app_config_dir, mkdir},
-    tools::stop,
-};
+use crash::core::{APP_CONFIG, UI, app_config_dir, mkdir};
 use github_proxy::Proxy;
 use std::path::PathBuf;
 
@@ -196,34 +192,24 @@ async fn main() -> anyhow::Result<()> {
             // use crash::scripts::ServiceManager;
             // let service = ServiceManager::new(config);
             // service.start()
-            let config = APP_CONFIG
-                .read()
+            let mut config = APP_CONFIG
+                .write()
                 .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
-
-            config
-                .core
-                .run(vec!["-f".to_string(), config.core.config_path()]);
+            config.start()?;
             Ok(())
         }
         Some(Commands::Stop) => {
-            // use crash::scripts::ServiceManager;
-
-            // let service = ServiceManager::new(config);
-            // service.stop();
-
-            let config = APP_CONFIG
-                .read()
+            let mut config = APP_CONFIG
+                .write()
                 .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
-
-            stop::stop_process(&config.core.exe_path())?;
+            config.stop()?;
             Ok(())
         }
         Some(Commands::Restart) => {
-            // use crash::scripts::ServiceManager;
-
-            // let service = ServiceManager::new(config);
-            // service.restart()
-
+            let mut config = APP_CONFIG
+                .write()
+                .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
+            config.restart()?;
             Ok(())
         }
 

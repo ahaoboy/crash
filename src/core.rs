@@ -1,14 +1,17 @@
 use crate::{
     // common::Language,
     download::download_file,
-    tools::exec::exec,
+    tools::{exec::exec, stop},
 };
 use anyhow::Result;
 use github_proxy::{Proxy, Resource};
 use guess_target::Target;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::sync::RwLock;
+use std::{
+    sync::RwLock,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use strum::{Display, EnumString, IntoStaticStr};
 
 const APP_CONFIG_DIR: &str = ".crash_config";
@@ -39,6 +42,13 @@ pub enum UI {
     Metacubexd,
     Zashboard,
     Yacd,
+}
+
+pub fn now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_secs()
 }
 
 impl UI {
@@ -75,7 +85,7 @@ impl UI {
 pub struct CrashConfig {
     pub version: String,
     pub config_dir: String,
-    pub start_time: usize,
+    pub start_time: u64,
     // pub language: Language,
     pub core: CrashCore,
     pub proxy: Proxy,
@@ -102,10 +112,44 @@ impl CrashConfig {
         Ok(c)
     }
 
+    pub fn is_running(&self) -> bool {
+        self.get_pid().is_ok()
+    }
+
+    pub fn restart(&mut self) -> anyhow::Result<()> {
+        if self.is_running() {
+            return Ok(());
+        }
+        self.start()?;
+        Ok(())
+    }
+
     pub fn save(&self) -> anyhow::Result<()> {
         let s = serde_json::to_string_pretty(self)?;
         mkdir(&app_config_dir());
         std::fs::write(app_config_path(), s)?;
+        Ok(())
+    }
+
+    pub fn stop(&mut self) -> anyhow::Result<()> {
+        stop::stop_process(&self.core.exe_path())?;
+        self.start_time = 0;
+        self.save()?;
+        Ok(())
+    }
+
+    pub fn start(&mut self) -> anyhow::Result<()> {
+        let v = vec![
+            "-f".to_string(),
+            self.core.config_path(),
+            "-ext-ctl".to_string(),
+            self.web.host.clone(),
+            "-ext-ui".to_string(),
+            self.web.ui.name().to_string(),
+        ];
+        self.core.run(v);
+        self.start_time = now();
+        self.save()?;
         Ok(())
     }
 
@@ -147,11 +191,23 @@ impl CrashConfig {
         download_file(&url, &dest).await?;
         Ok(())
     }
-
+    pub fn get_pid(&self) -> anyhow::Result<String> {
+        exec("pidof", vec![&self.core.exe_name()])
+    }
     pub fn status(&self) -> String {
-        let mut v = vec![("version", env!("CARGO_PKG_VERSION").to_string())];
+        let mut v = vec![
+            ("version", env!("CARGO_PKG_VERSION").to_string()),
+            (
+                "status",
+                if self.is_running() {
+                    "√".to_string()
+                } else {
+                    "X".to_string()
+                },
+            ),
+        ];
 
-        if let Ok(pid) = exec("pidof", vec![&self.core.exe_name()]) {
+        if let Ok(pid) = self.get_pid() {
             v.push(("pid", pid));
         }
 
@@ -167,6 +223,12 @@ impl CrashConfig {
         .and_then(|i| i.parse::<usize>().ok())
         {
             v.push(("memory", humansize::format_size(memory, humansize::DECIMAL)));
+        }
+
+        if self.start_time > 0 {
+            let duration = std::time::Duration::from_secs(now() - self.start_time);
+            let time = humantime::format_duration(duration).to_string();
+            v.push(("time", time));
         }
 
         let key_len = v.iter().fold(0, |a, b| a.max(b.0.len()));
@@ -296,14 +358,13 @@ impl CrashCore {
         match self {
             CrashCore::Mihomo => {
                 let config_path = self.config_path();
-                if !std::fs::exists(&config_path).unwrap_or(false) {
-                    if let Ok(config_str) =
+                if !std::fs::exists(&config_path).unwrap_or(false)
+                    && let Ok(config_str) =
                         serde_yaml::to_string(include_str!("./assets/mihomo.yaml"))
                         && let Err(e) = std::fs::write(&config_path, config_str)
                     {
                         eprintln!("Failed to write default mihomo config: {}", e);
                     }
-                }
             }
             _ => {
                 todo!()

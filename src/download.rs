@@ -1,8 +1,8 @@
 use anyhow::Context as _;
 use anyhow::Result;
 use reqwest::Client;
-use std::io::Write as _;
 use std::fs::File;
+use std::io::Write as _;
 
 pub async fn download_file(url: &str, dest: &str) -> Result<()> {
     let client = Client::builder()
