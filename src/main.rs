@@ -86,10 +86,11 @@ async fn main() -> anyhow::Result<()> {
             Ok(())
         }
         Some(Commands::UpdateUrl) => {
-            let config = APP_CONFIG
-                .read()
+            let mut config = APP_CONFIG
+                .write()
                 .map_err(|_| anyhow::anyhow!("Failed to acquire write lock for app config"))?;
             config.update_url().await?;
+            config.restart()?;
             Ok(())
         }
 

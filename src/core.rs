@@ -118,13 +118,25 @@ impl CrashConfig {
 
     pub fn restart(&mut self) -> anyhow::Result<()> {
         if self.is_running() {
-            return Ok(());
+            self.stop()?;
         }
         self.start()?;
         Ok(())
     }
 
     pub fn install_task(&self) -> anyhow::Result<()> {
+        let cron = "0 3 * * 3";
+        let exe = std::env::current_exe()?;
+        let exe_path = exe.to_string_lossy();
+        let cmd = format!("{} update-url", exe_path);
+        let s = format!("{} {}", cron, cmd);
+
+        if let Ok(list) = exec("crontab", vec!["-l"]) {
+            if list.lines().find(|line| line == &s).is_none() {
+                let sh = format!("(crontab -l 2>/dev/null; echo '{}') | crontab -", s);
+                exec("bash", vec!["-c", &sh])?;
+            }
+        }
         Ok(())
     }
 
