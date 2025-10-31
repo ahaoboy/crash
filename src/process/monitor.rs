@@ -2,9 +2,9 @@
 
 use crate::config::CrashConfig;
 use crate::error::Result;
+use crate::platform::command::execute;
 use crate::platform::process::get_pid;
 use crate::utils::time::{current_timestamp, format_uptime};
-use crate::{CrashError, platform::command::execute};
 use std::time::Duration;
 
 /// Calculate process uptime from start timestamp
@@ -37,6 +37,8 @@ pub fn get_memory_usage(pid: u32) -> Result<u64> {
 /// Get memory usage for a process by PID (Windows - not implemented)
 #[cfg(windows)]
 pub fn get_memory_usage(pid: u32) -> Result<u64> {
+    use crate::CrashError;
+
     let output = execute(
         "tasklist",
         &["/FI", &format!("PID eq {}", pid), "/NH", "/FO", "CSV"],

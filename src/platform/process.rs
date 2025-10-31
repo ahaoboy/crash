@@ -9,13 +9,15 @@ use std::process::Command;
 pub fn get_pid(name: &str) -> Result<u32> {
     let output = execute("pgrep", &["-x", name])?;
 
-    let pid = output
+    let pid_str = output
         .trim()
         .split_whitespace()
         .next()
-        .ok_or_else(|| anyhow::anyhow!("no pid output"))?
-        .parse()?;
-    Ok(pid)
+        .ok_or_else(|| CrashError::Process(format!("No process found with name: {}", name)))?;
+
+    pid_str
+        .parse::<u32>()
+        .map_err(|e| CrashError::Process(format!("Failed to parse PID '{}': {}", pid_str, e)))
 }
 
 #[cfg(target_os = "linux")]
