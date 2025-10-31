@@ -60,6 +60,7 @@ impl Core {
             }
             (Mihomo, Target::Aarch64UnknownLinuxMusl) => "mihomo-linux-arm64-v1.19.15.tgz",
             (Mihomo, Target::X86_64UnknownLinuxGnu) => "mihomo-linux-amd64-v1.19.15.tgz",
+            (Mihomo, Target::Aarch64AppleDarwin) => "mihomo-darwin-arm64-v1.19.15.tgz",
             _ => {
                 return Err(CrashError::Config(format!(
                     "Unsupported core type {:?} on target {:?}",
