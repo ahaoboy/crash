@@ -10,26 +10,40 @@ authors = ["ahaoboy"]
 include = ["/src", "/Cargo.toml", "/README.md"]
 
 [dependencies]
+# CLI argument parsing
 clap = { version = "4", features = ["derive"] }
+
+# Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-reqwest = { version = "0.12", features = ["json", "blocking"] }
-anyhow = "1"
+
+# HTTP client for downloads
+reqwest = { version = "0.12", features = ["json", "stream"] }
+futures-util = "0.3"
+
+# Error handling
 thiserror = "2"
-once_cell = "1"
-guess-target = { version = "0.1", git = "https://github.com/ahaoboy/guess-target", features = [
-  "serde",
-] }
+
+# Async runtime
 tokio = { version = "1", features = ["full"], default-features = false }
+
+# Logging and time
+chrono = "0.4"
+once_cell = "1"
+
+# Platform detection and proxy management
+guess-target = { version = "0.1", git = "https://github.com/ahaoboy/guess-target", features = ["serde"] }
+github-proxy = { version = "0.1", git = "https://github.com/ahaoboy/github-proxy", features = ["serde"] }
+
+# Installation utilities
 easy-install = { version = "1", git = "https://github.com/easy-install/easy-install" }
-strum_macros = "0.27"
+
+# String utilities
 strum = { version = "0.27", features = ["derive"] }
-github-proxy = { version = "0.1", git = "https://github.com/ahaoboy/github-proxy", features = [
-  "serde",
-] }
-humansize = "2"
-humantime ="2"
-local-ip-address="0.6"
+strum_macros = "0.27"
+
+# Network utilities
+local-ip-address = "0.6"
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }

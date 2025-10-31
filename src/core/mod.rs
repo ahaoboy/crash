@@ -1,0 +1,225 @@
+// Core management module for proxy cores
+
+use crate::config::{ConfigHandle, CrashConfig};
+use crate::download::DownloadManager;
+use crate::error::{CrashError, Result};
+use crate::platform::command::CommandExecutor;
+use crate::process::ProcessController;
+use crate::utils::time::current_timestamp;
+use crate::{log_debug, log_info};
+
+pub mod geo;
+pub mod installer;
+pub mod updater;
+
+pub use installer::Installer;
+pub use updater::Updater;
+
+/// Core manager for managing proxy core lifecycle
+pub struct CoreManager {
+    config: ConfigHandle,
+    process_controller: ProcessController,
+    installer: Installer,
+    updater: Updater,
+}
+
+impl CoreManager {
+    /// Create a new core manager
+    pub fn new(config: ConfigHandle) -> Self {
+        let download_manager = DownloadManager::default();
+
+        Self {
+            config,
+            process_controller: ProcessController::new(),
+            installer: Installer::new(download_manager.clone()),
+            updater: Updater::new(download_manager),
+        }
+    }
+
+    /// Start the proxy core
+    pub fn start(&mut self) -> Result<()> {
+        let mut config = self.config.write().map_err(|_| {
+            CrashError::Config("Failed to acquire write lock on config".to_string())
+        })?;
+
+        log_info!("Starting proxy core: {}", config.core.name());
+
+        let exe_path = config.core.exe_path(&config.config_dir);
+
+        if !exe_path.exists() {
+            return Err(CrashError::Process(format!(
+                "Core executable not found: {}. Please run 'install' first.",
+                exe_path.display()
+            )));
+        }
+
+        let args = vec![
+            "-f".to_string(),
+            config.config_path().to_string_lossy().to_string(),
+            "-ext-ctl".to_string(),
+            config.web.host.clone(),
+            "-ext-ui".to_string(),
+            config.web.ui_name().to_string(),
+            "-d".to_string(),
+            config.config_dir.to_string_lossy().to_string(),
+        ];
+
+        self.process_controller.start(&exe_path, args)?;
+
+        config.start_time = current_timestamp();
+        config.save()?;
+
+        log_info!("Proxy core started successfully");
+        Ok(())
+    }
+
+    /// Stop the proxy core
+    pub fn stop(&mut self) -> Result<()> {
+        let mut config = self.config.write().map_err(|_| {
+            CrashError::Config("Failed to acquire write lock on config".to_string())
+        })?;
+
+        log_info!("Stopping proxy core: {}", config.core.name());
+
+        let exe_name = config.core.exe_name();
+        self.process_controller.stop(&exe_name)?;
+
+        config.start_time = 0;
+        config.save()?;
+
+        log_info!("Proxy core stopped successfully");
+        Ok(())
+    }
+
+    /// Restart the proxy core
+    pub fn restart(&mut self) -> Result<()> {
+        log_info!("Restarting proxy core");
+
+        let config = self
+            .config
+            .read()
+            .map_err(|_| CrashError::Config("Failed to acquire read lock on config".to_string()))?;
+
+        let exe_name = config.core.exe_name();
+        let exe_path = config.core.exe_path(&config.config_dir);
+
+        let args = vec![
+            "-f".to_string(),
+            config.config_path().to_string_lossy().to_string(),
+            "-ext-ctl".to_string(),
+            config.web.host.clone(),
+            "-ext-ui".to_string(),
+            config.web.ui_name().to_string(),
+            "-d".to_string(),
+            config.config_dir.to_string_lossy().to_string(),
+        ];
+
+        drop(config); // Release read lock before acquiring write lock
+
+        self.process_controller
+            .restart(&exe_name, &exe_path, args)?;
+
+        let mut config = self.config.write().map_err(|_| {
+            CrashError::Config("Failed to acquire write lock on config".to_string())
+        })?;
+
+        config.start_time = current_timestamp();
+        config.save()?;
+
+        log_info!("Proxy core restarted successfully");
+        Ok(())
+    }
+
+    /// Get the version of the installed proxy core
+    pub fn get_version(&self) -> Option<String> {
+        let config = self.config.read().ok()?;
+
+        log_debug!("Getting version for core: {}", config.core.name());
+
+        let exe_path = config.core.exe_path(&config.config_dir);
+
+        if !exe_path.exists() {
+            log_debug!("Core executable not found: {}", exe_path.display());
+            return None;
+        }
+
+        let executor = CommandExecutor;
+        let output = executor.execute(exe_path.to_str()?, &["-v"]).ok()?;
+
+        // Parse version from output (format: "Mihomo version 1.19.15")
+        let version = output.split_whitespace().nth(2).map(|s| s.to_string());
+
+        log_debug!("Core version: {:?}", version);
+        version
+    }
+
+    /// Install the proxy core and UI
+    pub async fn install(&self, force: bool) -> Result<()> {
+        log_info!("Installing proxy core and UI (force: {})", force);
+
+        let config_clone = {
+            let config = self
+                .config
+                .read()
+                .map_err(|_| CrashError::Config("Failed to acquire read lock on config".to_string()))?;
+
+            // Ensure default config file exists
+            self.ensure_default_config(&config)?;
+
+            config.clone()
+        }; // Lock is dropped here
+
+        // Install core
+        self.installer.install_core(&config_clone, force).await?;
+
+        // Install UI
+        self.installer.install_ui(&config_clone, force).await?;
+
+        // Install geo databases
+        self.installer.install_geo_databases(&config_clone, force).await?;
+
+        log_info!("Installation completed successfully");
+        Ok(())
+    }
+
+    /// Ensure default configuration file exists
+    fn ensure_default_config(&self, config: &CrashConfig) -> Result<()> {
+        let config_path = config.config_path();
+
+        if config_path.exists() {
+            return Ok(());
+        }
+
+        log_info!(
+            "Creating default configuration file: {}",
+            config_path.display()
+        );
+
+        // Create default Mihomo config
+        let default_config = include_str!("../assets/mihomo.yaml");
+
+        crate::utils::fs::atomic_write(&config_path, default_config)?;
+
+        Ok(())
+    }
+
+    /// Get reference to the installer
+    pub fn installer(&self) -> &Installer {
+        &self.installer
+    }
+
+    /// Get reference to the updater
+    pub fn updater(&self) -> &Updater {
+        &self.updater
+    }
+
+    /// Check if the process is running
+    pub fn is_running(&self, exe_name: &str) -> bool {
+        self.process_controller.is_running(exe_name)
+    }
+
+    /// Get the process ID
+    pub fn get_pid(&self, exe_name: &str) -> Result<u32> {
+        self.process_controller.get_pid(exe_name)
+    }
+}
