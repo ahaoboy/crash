@@ -159,6 +159,16 @@ impl CrashConfig {
         let port = self.web.host.split(":").nth(1).unwrap_or("9090");
         v.push(("web", format!("http://{}:{}/ui", ip, port)));
 
+        if let Some(memory) = exec(
+            "cat",
+            vec!["/proc/{}/status | grep VmRSS | awk '{{print $2}}'"],
+        )
+        .ok()
+        .and_then(|i| i.parse::<usize>().ok())
+        {
+            v.push(("memory", humansize::format_size(memory, humansize::DECIMAL)));
+        }
+
         let key_len = v.iter().fold(0, |a, b| a.max(b.0.len()));
         v.iter()
             .map(|(k, v)| format!("{:width$} : {}", k, v, width = key_len))
