@@ -124,6 +124,15 @@ impl CrashConfig {
         Ok(())
     }
 
+    pub fn install_task(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    pub async fn update_url(&self) -> anyhow::Result<()> {
+        download_file(&self.url, &self.core.config_path()).await?;
+        Ok(())
+    }
+
     pub fn save(&self) -> anyhow::Result<()> {
         let s = serde_json::to_string_pretty(self)?;
         mkdir(&app_config_dir());
@@ -361,10 +370,10 @@ impl CrashCore {
                 if !std::fs::exists(&config_path).unwrap_or(false)
                     && let Ok(config_str) =
                         serde_yaml::to_string(include_str!("./assets/mihomo.yaml"))
-                        && let Err(e) = std::fs::write(&config_path, config_str)
-                    {
-                        eprintln!("Failed to write default mihomo config: {}", e);
-                    }
+                    && let Err(e) = std::fs::write(&config_path, config_str)
+                {
+                    eprintln!("Failed to write default mihomo config: {}", e);
+                }
             }
             _ => {
                 todo!()
