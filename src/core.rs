@@ -116,12 +116,8 @@ impl CrashConfig {
         format!("{}/{}", self.config_dir, self.core.config_file_name())
     }
 
-    pub fn is_running(&self) -> bool {
-        self.get_pid().is_ok()
-    }
-
     pub fn restart(&mut self) -> anyhow::Result<()> {
-        if self.is_running() {
+        if self.get_pid().is_ok() {
             self.stop()?;
         }
         self.start()?;
@@ -270,15 +266,16 @@ impl CrashConfig {
         Ok(())
     }
 
-    pub fn get_pid(&self) -> anyhow::Result<String> {
-        exec("pidof", vec![&self.core.exe_name()])
+    pub fn get_pid(&self) -> anyhow::Result<u64> {
+        let s = exec("pidof", vec![&self.core.exe_name()])?;
+        Ok(s.trim().parse::<u64>()?)
     }
     pub fn status(&self) -> String {
         let mut v = vec![
             ("version", env!("CARGO_PKG_VERSION").to_string()),
             (
                 "status",
-                if self.is_running() {
+                if self.get_pid().is_ok() {
                     "✅".to_string()
                 } else {
                     "❌".to_string()
@@ -286,10 +283,8 @@ impl CrashConfig {
             ),
         ];
 
-        if let Ok(pid) = self.get_pid()
-            && !pid.trim().is_empty()
-        {
-            v.push(("pid", pid.trim().to_string()));
+        if let Ok(pid) = self.get_pid() {
+            v.push(("pid", pid.to_string()));
         }
 
         if let Ok(ip) = local_ip_address::local_ip() {
