@@ -252,7 +252,6 @@ impl CrashConfig {
         match self.core {
             CrashCore::Mihomo => {
                 let s = exec(self.core.exe_path(), vec!["-v"]).ok()?;
-                println!("-v {}", s);
                 s.split_whitespace().nth(2).map(|s| s.to_string())
             }
             _ => None,
@@ -320,17 +319,15 @@ impl CrashConfig {
         } else {
             self.core.to_string()
         };
+
+        let running_status = if get_pid(&self.core.exe_name()).is_ok() {
+            "✅".to_string()
+        } else {
+            "❌".to_string()
+        };
         let mut v = vec![
             ("version", env!("CARGO_PKG_VERSION").to_string()),
             ("core", core_status),
-            (
-                "status",
-                if get_pid(&self.core.exe_name()).is_ok() {
-                    "✅".to_string()
-                } else {
-                    "❌".to_string()
-                },
-            ),
         ];
 
         if let Ok(pid) = get_pid(&self.core.exe_name()) {
@@ -352,16 +349,13 @@ impl CrashConfig {
             v.push(("memory", humansize::format_size(memory, humansize::DECIMAL)));
         }
 
-        if self.start_time > 0 {
-            let duration =
-                std::time::Duration::from_secs(if get_pid(&self.core.exe_name()).is_ok() {
-                    now() - self.start_time
-                } else {
-                    0
-                });
-            let time = humantime::format_duration(duration).to_string();
-            v.push(("time", time));
-        }
+        let duration = std::time::Duration::from_secs(if get_pid(&self.core.exe_name()).is_ok() {
+            now() - self.start_time
+        } else {
+            0
+        });
+        let time = humantime::format_duration(duration).to_string();
+        v.push(("status", format!("{} {}", running_status, time)));
 
         let key_len = v.iter().fold(0, |a, b| a.max(b.0.len()));
         v.iter()
