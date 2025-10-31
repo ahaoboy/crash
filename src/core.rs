@@ -225,7 +225,7 @@ impl CrashConfig {
         self.save()?;
         Ok(())
     }
-    pub fn make_config(&self) {
+    pub fn ensure_config(&self) {
         match self.core {
             CrashCore::Mihomo => {
                 let config_path = self.config_path();
@@ -356,7 +356,7 @@ impl CrashConfig {
     }
 
     pub async fn install(&self, force: bool) -> Option<()> {
-        self.make_config();
+        self.ensure_config();
         self.install_ui(force).await;
         self.install_core(force).await;
         Some(())
