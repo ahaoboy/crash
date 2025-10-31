@@ -36,6 +36,8 @@ enum Commands {
     /// Manage tasks
     Task,
 
+    RunTask,
+
     Url {
         url: String,
     },
@@ -116,6 +118,15 @@ async fn main() -> anyhow::Result<()> {
                 .write()
                 .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
             config.start()?;
+            Ok(())
+        }
+        Some(Commands::RunTask) => {
+            let mut config = APP_CONFIG
+                .write()
+                .map_err(|_| anyhow::anyhow!("Failed to read app config"))?;
+            config.update_url(true).await?;
+            config.update_geo(true).await?;
+            config.restart()?;
             Ok(())
         }
         Some(Commands::Stop) => {

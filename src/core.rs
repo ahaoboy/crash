@@ -140,7 +140,7 @@ impl CrashConfig {
         let cron = "0 3 * * 3";
         let exe = std::env::current_exe()?;
         let exe_path = exe.to_string_lossy();
-        let cmd = format!("{} update-url", exe_path);
+        let cmd = format!("{} run-task", exe_path);
         let s = format!("{} {}", cron, cmd);
 
         if let Ok(list) = exec("crontab", vec!["-l"])
