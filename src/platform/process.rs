@@ -7,7 +7,7 @@ use std::process::Command;
 
 #[cfg(target_os = "macos")]
 pub fn get_pid(name: &str) -> Result<u32> {
-    let output = execute("pgrep", vec!["-x", name])?;
+    let output = execute("pgrep", &["-x", name])?;
 
     let pid = output
         .trim()
