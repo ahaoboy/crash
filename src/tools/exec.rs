@@ -6,7 +6,7 @@ pub fn exec<S: AsRef<OsStr>>(cmd: S, args: Vec<&str>) -> anyhow::Result<String> 
         .args(args)
         .stdin(Stdio::null())
         .stderr(Stdio::null())
-        .stdout(Stdio::null())
+        // .stdout(Stdio::null())
         .output()?;
     let s = String::from_utf8_lossy(&output.stdout);
     Ok(s.to_string())

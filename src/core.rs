@@ -52,6 +52,34 @@ pub fn now() -> u64 {
         .as_secs()
 }
 
+#[cfg(unix)]
+pub fn get_pid(name: &str) -> anyhow::Result<u64> {
+    let s = exec("pidof", vec![name])?;
+    let pid = s
+        .trim()
+        .split_whitespace()
+        .next()
+        .context("No process found")?
+        .parse::<u64>()?;
+    Ok(pid)
+}
+
+#[cfg(windows)]
+pub fn get_pid(name: &str) -> anyhow::Result<u64> {
+    let output = exec("tasklist", vec!["/FI", &format!("IMAGENAME eq {name}")])?;
+    for line in output.lines() {
+        if line.to_lowercase().starts_with(&name.to_lowercase()) {
+            if let Some(pid_str) = line.split_whitespace().nth(1) {
+                if let Ok(pid) = pid_str.parse::<u64>() {
+                    return Ok(pid);
+                }
+            }
+        }
+    }
+
+    Err(anyhow::format_err!("Process '{}' not found", name))
+}
+
 impl UI {
     pub fn name(&self) -> &'static str {
         self.into()
@@ -117,7 +145,7 @@ impl CrashConfig {
     }
 
     pub fn restart(&mut self) -> anyhow::Result<()> {
-        if self.get_pid().is_ok() {
+        if get_pid(&self.core.exe_name()).is_ok() {
             self.stop()?;
         }
         self.start()?;
@@ -266,17 +294,13 @@ impl CrashConfig {
         Ok(())
     }
 
-    pub fn get_pid(&self) -> anyhow::Result<u64> {
-        let s = exec("pidof", vec![&self.core.exe_name()])?;
-        Ok(s.trim().parse::<u64>()?)
-    }
     pub fn status(&self) -> String {
         let mut v = vec![
             ("version", env!("CARGO_PKG_VERSION").to_string()),
             ("core", self.core.to_string()),
             (
                 "status",
-                if self.get_pid().is_ok() {
+                if get_pid(&self.core.exe_name()).is_ok() {
                     "✅".to_string()
                 } else {
                     "❌".to_string()
@@ -284,7 +308,7 @@ impl CrashConfig {
             ),
         ];
 
-        if let Ok(pid) = self.get_pid() {
+        if let Ok(pid) = get_pid(&self.core.exe_name()) {
             v.push(("pid", pid.to_string()));
         }
 
@@ -304,7 +328,12 @@ impl CrashConfig {
         }
 
         if self.start_time > 0 {
-            let duration = std::time::Duration::from_secs(now() - self.start_time);
+            let duration =
+                std::time::Duration::from_secs(if get_pid(&self.core.exe_name()).is_ok() {
+                    now() - self.start_time
+                } else {
+                    0
+                });
             let time = humantime::format_duration(duration).to_string();
             v.push(("time", time));
         }
