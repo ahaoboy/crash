@@ -91,44 +91,41 @@ fn handle_status() -> Result<()> {
     Ok(())
 }
 
-/// Handle task command (install cron task)
+#[cfg(unix)]
 fn handle_task() -> Result<()> {
+    use crate::platform::command::execute;
+
     log_info!("Executing task command");
 
-    #[cfg(unix)]
-    {
-        use crate::platform::command::execute;
+    let exe = std::env::current_exe().map_err(|e| {
+        CrashError::Platform(format!("Failed to get current executable path: {}", e))
+    })?;
 
-        let exe = std::env::current_exe().map_err(|e| {
-            CrashError::Platform(format!("Failed to get current executable path: {}", e))
-        })?;
+    let exe_path = exe.to_string_lossy();
 
-        let exe_path = exe.to_string_lossy();
-        let cmd = format!("{} run-task", exe_path);
-        let cron = "0 3 * * 3"; // Every Wednesday at 3 AM
+    for (cron, subcmd) in [("0 3 * * 3", "run-task"), ("*/10 * * * *", "start")] {
+        let cmd = format!("{} {}", exe_path, subcmd);
         let entry = format!("{} {}", cron, cmd);
 
-        // Check if entry already exists
         if let Ok(list) = execute("crontab", &["-l"]) {
             if list.lines().any(|line| line == entry) {
                 println!("Scheduled task already exists");
-                return Ok(());
+                continue;
             }
+
+            let sh = format!("(crontab -l 2>/dev/null; echo '{}') | crontab -", entry);
+            execute("bash", &["-c", &sh])?;
+            println!("Scheduled task installed successfully!");
+            println!("Task will run: {}", cron);
         }
-
-        // Add cron entry
-        let sh = format!("(crontab -l 2>/dev/null; echo '{}') | crontab -", entry);
-        execute("bash", &["-c", &sh])?;
-
-        println!("Scheduled task installed successfully!");
-        println!("Task will run: {}", cron);
     }
 
-    #[cfg(windows)]
-    {
-        println!("Scheduled tasks are not supported on Windows yet");
-    }
+    Ok(())
+}
 
+#[cfg(windows)]
+fn handle_task() -> Result<()> {
+    println!("Scheduled tasks are not supported on Windows yet");
     Ok(())
 }
 
