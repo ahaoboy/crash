@@ -643,9 +643,9 @@ update_path_windows() {
   local is_admin=$(powershell -c $cmd)
   local mode="User"
   if [ "$is_admin" = "True" ]; then
-    PATH_MODE="Machine"
+    mode="Machine"
   else
-    PATH_MODE="User"
+    mode="User"
   fi
   # Convert MSYS/Git Bash path to Windows path
   local windows_path=$(resolve_windows_path $install_dir)
