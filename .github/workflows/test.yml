@@ -31,7 +31,7 @@ jobs:
       #     cargo test
       - name: cargo install
         run: |
-          cargo install --path .
+          cargo install -q --path .
       - name: run
         run: |
           crash install

@@ -36,7 +36,7 @@ async fn handle_install(force: bool) -> Result<()> {
     log_info!("Executing install command (force: {})", force);
 
     CrashConfig::load()?.install(force).await?;
-
+    handle_task()?;
     println!("Installation completed successfully!");
     Ok(())
 }
