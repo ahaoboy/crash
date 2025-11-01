@@ -99,13 +99,13 @@ impl Core {
 # Crash default tun
 tun:
   enable: true
-  stack: mixed
+  device: Meta
+  stack: gVisor
+  auto-route: true
+  auto-detect-interface: true
   dns-hijack:
     - "any:53"
     - "tcp://any:53"
-  auto-route: true
-  auto-redirect: true
-  auto-detect-interface: true
 "#
                     )
                 }
