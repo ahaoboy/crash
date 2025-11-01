@@ -5,6 +5,7 @@ use crate::config::CrashConfig;
 use crate::core::updater::{update_config, update_geo};
 use crate::error::{CrashError, Result};
 use crate::log_info;
+use crate::platform::command::execute;
 use crate::process::monitor::format_status;
 use github_proxy::Proxy;
 use std::str::FromStr;
@@ -19,6 +20,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::Status) => handle_status(),
         Some(Commands::Task) => handle_task(),
         Some(Commands::RunTask) => handle_run_task().await,
+        Some(Commands::RemoveTask) => handle_remove_task(),
         Some(Commands::Url { url }) => handle_url(url),
         Some(Commands::UpdateUrl { force }) => handle_update_url(force).await,
         Some(Commands::UpdateGeo { force }) => handle_update_geo(force).await,
@@ -93,8 +95,6 @@ fn handle_status() -> Result<()> {
 
 #[cfg(unix)]
 fn handle_task() -> Result<()> {
-    use crate::platform::command::execute;
-
     log_info!("Executing task command");
 
     let exe = std::env::current_exe().map_err(|e| {
@@ -124,7 +124,6 @@ fn handle_task() -> Result<()> {
 }
 #[cfg(windows)]
 fn handle_task() -> Result<()> {
-    use crate::platform::command::execute;
     log_info!("Executing task command");
 
     let exe = std::env::current_exe().map_err(|e| {
@@ -169,6 +168,63 @@ fn handle_task() -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+#[cfg(windows)]
+fn handle_remove_task() -> Result<()> {
+    println!("Removing Windows scheduled task");
+    for name in ["CrashRunTask", "CrashStart"] {
+        let status = execute("schtasks", &["/delete", "/tn", name, "/f"]);
+        if status.is_ok() {
+            println!("Task '{}' deleted successfully.", name);
+        } else {
+            println!("Task '{}' deleted error.", name);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+pub fn handle_remove_task() -> Result<()> {
+    println!("Removing Unix scheduled task");
+
+    let current = execute("crontab", &["-l"])?;
+    let mut new_lines = Vec::new();
+
+    let exe = std::env::current_exe().map_err(|e| {
+        CrashError::Platform(format!("Failed to get current executable path: {}", e))
+    })?;
+
+    let exe_path = exe.to_string_lossy();
+
+    for (cron, subcmd) in [("0 3 * * 3", "run-task"), ("*/10 * * * *", "start")] {
+        let cmd = format!("{} {}", exe_path, subcmd);
+        let entry = format!("{} {}", cron, cmd);
+
+        for line in current.lines() {
+            if !line.contains(&entry) {
+                new_lines.push(line);
+            } else {
+                println!("Removed: {}", line);
+            }
+        }
+    }
+
+    let mut child = std::process::Command::new("crontab")
+        .stdin(std::process::Stdio::piped())
+        .spawn()?;
+
+    if let Some(stdin) = child.stdin.as_mut() {
+        std::io::Write::write_all(stdin, new_lines.join("\n").as_bytes())?;
+    }
+
+    let status = child.wait()?;
+    if status.success() {
+        println!("Cron task removed successfully.");
+    } else {
+        println!("Cron task removed error.");
+    }
     Ok(())
 }
 

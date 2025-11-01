@@ -49,6 +49,8 @@ pub enum Commands {
     /// Run scheduled update task
     RunTask,
 
+    RemoveTask,
+
     /// Set the configuration URL
     Url {
         /// Configuration file URL
