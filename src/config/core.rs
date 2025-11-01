@@ -62,6 +62,9 @@ impl Core {
             (Mihomo, Target::X86_64UnknownLinuxGnu) => "mihomo-linux-amd64-v1.19.15.tar.xz",
             (Mihomo, Target::Aarch64AppleDarwin) => "mihomo-darwin-arm64-v1.19.15.tar.xz",
             (Mihomo, Target::X86_64AppleDarwin) => "mihomo-darwin-amd64-v1.19.15.tar.xz",
+
+            (Clash, Target::Aarch64UnknownLinuxMusl) => "clash-linux-arm64.tar.xz",
+            (Clash, Target::X86_64UnknownLinuxGnu) => "clash-linux-amd64.tar.xz",
             _ => {
                 return Err(CrashError::Config(format!(
                     "Unsupported core type {:?} on target {:?}",
@@ -87,7 +90,7 @@ impl Core {
 
     pub fn get_geo_files(&self) -> Vec<&'static str> {
         match self {
-            Core::Mihomo => vec![
+            Core::Mihomo | Core::Clash => vec![
                 "geoip.metadb.tar.xz",
                 "geoip.dat.tar.xz",
                 "geosite.dat.tar.xz",
@@ -135,6 +138,7 @@ tun:
                     )
                 }
             }
+            Core::Clash => return config.replace("- 'RULE-SET,", "#- 'RULE-SET,").to_string(),
             _ => config.to_string(),
         }
     }
