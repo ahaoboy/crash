@@ -51,3 +51,9 @@ jobs:
           RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
           tag: nightly
           allowUpdates: true
+      - name: wait
+        run: |
+          sleep 300
+      - name: install.sh
+        run: |
+          bash ./install.sh
