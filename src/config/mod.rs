@@ -1,7 +1,6 @@
 // Configuration management module
 
 use crate::config::core::Core;
-use crate::download::download_file;
 use crate::error::{CrashError, Result};
 use crate::platform::command::execute;
 use crate::platform::process::get_pid;
@@ -288,18 +287,13 @@ impl CrashConfig {
         log_info!("Downloading core from: {}", url);
 
         // Use easy-install to download and extract
-        let result = easy_install::run_main(easy_install::Args {
-            url,
-            dir: Some(self.config_dir.to_string_lossy().to_string()),
-            install_only: true,
-            name: vec![],
-            alias: Some(self.core.name().to_string()),
-            target: None,
-            retry: 3,
-            proxy: self.proxy,
-            timeout: 600,
-        })
-        .await;
+        let result = self
+            .ei(
+                &url,
+                &self.config_dir.to_string_lossy(),
+                Some(self.core.name().to_string()),
+            )
+            .await;
 
         if result.is_err() {
             return Err(CrashError::Download(
@@ -319,6 +313,17 @@ impl CrashConfig {
         Ok(())
     }
 
+    pub async fn ei(&self, url: &str, dir: &str, alias: Option<String>) -> anyhow::Result<()> {
+        easy_install::run_main(easy_install::Args {
+            url: url.to_string(),
+            dir: Some(dir.to_string()),
+            install_only: true,
+            proxy: self.proxy,
+            alias,
+            ..Default::default()
+        })
+        .await
+    }
     /// Install the web UI
     pub async fn install_ui(&self, force: bool) -> Result<()> {
         let ui_dir = self.web.ui_dir(&self.config_dir);
@@ -336,18 +341,7 @@ impl CrashConfig {
         log_info!("Downloading UI from: {}", url);
 
         // Use easy-install to download and extract
-        let result = easy_install::run_main(easy_install::Args {
-            url,
-            dir: Some(ui_dir.to_string_lossy().to_string()),
-            install_only: true,
-            name: vec![],
-            alias: None,
-            target: None,
-            retry: 3,
-            proxy: self.proxy,
-            timeout: 600,
-        })
-        .await;
+        let result = self.ei(&url, &ui_dir.to_string_lossy(), None).await;
 
         if result.is_err() {
             return Err(CrashError::Download("Failed to install UI".to_string()));
@@ -380,7 +374,7 @@ impl CrashConfig {
                 continue;
             };
 
-            let db_path = self.config_dir.join(name);
+            let db_path = self.config_dir.join(name.replace(".tar.xz", ""));
 
             if file_exists(&db_path) && !force {
                 log_info!("Database {} already exists", name);
@@ -389,9 +383,15 @@ impl CrashConfig {
 
             log_info!("Downloading GeoIP database: {}", name);
 
-            download_file(&url, &db_path).await?;
-
-            log_info!("Downloaded {} successfully", name);
+            if self
+                .ei(&url, &self.config_dir.to_string_lossy(), None)
+                .await
+                .is_ok()
+            {
+                log_info!("Downloaded {} successfully", name);
+            } else {
+                log_info!("Downloaded {} error", name);
+            }
         }
 
         log_info!("GeoIP databases installed successfully");
