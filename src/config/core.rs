@@ -85,6 +85,25 @@ impl Core {
         })
     }
 
+    pub fn get_geo_files(&self) -> Vec<&'static str> {
+        match self {
+            Core::Mihomo => vec!["geoip.metadb", "geoip.dat", "geosite.dat"],
+            // Core::Clash => vec![
+            //     "china_ip_list.txt",
+            //     "china_ipv6_list.txt",
+            //     "cn_mini.mmdb",
+            //     "Country.mmdb",
+            //     "geoip_cn.db",
+            //     "geosite.dat",
+            //     "geosite_cn.db",
+            //     "mrs_geosite_cn.mrs",
+            //     "srs_geoip_cn.srs",
+            //     "srs_geosite_cn.srs",
+            // ],
+            _ => vec![],
+        }
+    }
+
     pub fn patch_config(&self, config: &str) -> String {
         match self {
             Core::Mihomo => {
