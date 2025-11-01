@@ -39,3 +39,6 @@ jobs:
           crash
           crash stop
           crash
+      - name: ll
+        run: |
+          ls "$(dirname "$(which crash)")/crash_config"

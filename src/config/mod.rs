@@ -18,7 +18,7 @@ pub mod web;
 
 pub use web::WebConfig;
 
-const APP_CONFIG_DIR: &str = ".crash_config";
+const APP_CONFIG_DIR: &str = "crash_config";
 const APP_CONFIG_NAME: &str = "crash_config.json";
 const APP_LOG_DIR: &str = "logs";
 
