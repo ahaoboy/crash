@@ -1,4 +1,4 @@
-// Main entry point for the Crash application
+#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
 use anyhow::Result;
 use clap::Parser;

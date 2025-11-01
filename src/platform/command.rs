@@ -1,10 +1,14 @@
 // Cross-platform command execution utilities
 
-use crate::error::{CrashError, Result};
+use crate::{
+    error::{CrashError, Result},
+    log_info,
+};
 use std::process::{Command, Stdio};
 
 /// Execute a command synchronously and return its output
 pub fn execute(cmd: &str, args: &[&str]) -> Result<String> {
+    log_info!("execute {} {}", cmd, args.join(" "));
     let output = Command::new(cmd)
         .args(args)
         .stdin(Stdio::null())

@@ -122,10 +122,53 @@ fn handle_task() -> Result<()> {
 
     Ok(())
 }
-
 #[cfg(windows)]
 fn handle_task() -> Result<()> {
-    println!("Scheduled tasks are not supported on Windows yet");
+    use crate::platform::command::execute;
+    log_info!("Executing task command");
+
+    let exe = std::env::current_exe().map_err(|e| {
+        CrashError::Platform(format!("Failed to get current executable path: {}", e))
+    })?;
+
+    let exe_path = exe.to_string_lossy();
+
+    let tasks = [
+        ("CrashRunTask", "run-task", "WEEKLY", "WED", "03:00"),
+        ("CrashStart", "start", "MINUTE", "", "00:00"),
+    ];
+
+    for (name, subcmd, schedule, days, time) in tasks {
+        if execute("schtasks", &["/query", "/tn", name])
+            .unwrap_or_default()
+            .contains(name)
+        {
+            continue;
+        }
+
+        let full_cmd = format!("\"{}\" {}", exe_path, subcmd);
+
+        let mut args = vec!["/create", "/tn", name, "/tr", &full_cmd, "/sc", schedule];
+
+        if !days.is_empty() {
+            args.extend_from_slice(&["/d", days]);
+        }
+
+        if schedule.eq_ignore_ascii_case("MINUTE") {
+            args.extend_from_slice(&["/mo", "10"]);
+        }
+
+        args.extend_from_slice(&["/st", time]);
+
+        args.extend_from_slice(&["/rl", "LIMITED"]);
+
+        if execute("schtasks", &args).is_ok() {
+            println!("Scheduled task '{}' created successfully.", name);
+        } else {
+            println!("Scheduled task '{}' created error.", name);
+        }
+    }
+
     Ok(())
 }
 
