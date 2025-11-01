@@ -101,11 +101,13 @@ tun:
   enable: true
   device: Meta
   stack: gVisor
+  dns-hijack:
+    - 0.0.0.0:53
   auto-route: true
   auto-detect-interface: true
-  dns-hijack:
-    - "any:53"
-    - "tcp://any:53"
+  gso-max-size: 65536
+  file-descriptor: 0
+  recvmsgx: true
 "#
                     )
                 }
