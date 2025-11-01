@@ -121,7 +121,7 @@ impl CrashConfig {
         self.config_dir.join(self.core.config_file_name())
     }
 
-    pub fn start(&mut self) -> Result<()> {
+    pub fn start(&mut self, force: bool) -> Result<()> {
         log_info!("Starting proxy core: {}", self.core.name());
 
         let exe_path = self.core.exe_path(&self.config_dir);
@@ -135,7 +135,11 @@ impl CrashConfig {
 
         if get_pid(&self.core.exe_name()).is_ok() {
             log_info!("Skip starting proxy core: {}", self.core.name());
-            return Ok(());
+            if force {
+                self.stop()?;
+            } else {
+                return Ok(());
+            }
         }
 
         let args = vec![

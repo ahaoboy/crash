@@ -14,9 +14,8 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
     match command {
         Some(Commands::Install { force }) => handle_install(force).await,
         Some(Commands::Proxy { proxy }) => handle_proxy(proxy),
-        Some(Commands::Start) => handle_start(),
+        Some(Commands::Start{force}) => handle_start(force),
         Some(Commands::Stop) => handle_stop(),
-        Some(Commands::Restart) => handle_restart(),
         Some(Commands::Status) => handle_status(),
         Some(Commands::Task) => handle_task(),
         Some(Commands::RunTask) => handle_run_task().await,
@@ -55,10 +54,10 @@ fn handle_proxy(proxy: Proxy) -> Result<()> {
 }
 
 /// Handle start command
-fn handle_start() -> Result<()> {
+fn handle_start(force:bool) -> Result<()> {
     log_info!("Executing start command");
 
-    CrashConfig::load()?.start()?;
+    CrashConfig::load()?.start(force)?;
 
     println!("Proxy service started successfully!");
     Ok(())

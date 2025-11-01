@@ -32,13 +32,13 @@ pub enum Commands {
     },
 
     /// Start the proxy service
-    Start,
+    Start {
+        #[arg(short, long, default_value_t = false)]
+        force: bool,
+    },
 
     /// Stop the proxy service
     Stop,
-
-    /// Restart the proxy service
-    Restart,
 
     /// Show service status
     Status,
