@@ -4,6 +4,7 @@ use crate::config::core::Core;
 use crate::download::download_file;
 use crate::error::{CrashError, Result};
 use crate::platform::command::execute;
+use crate::platform::process::get_pid;
 use crate::process::{restart, start, stop};
 use crate::utils::fs::{atomic_write, ensure_dir};
 use crate::utils::{current_timestamp, file_exists};
@@ -122,11 +123,9 @@ impl CrashConfig {
     }
 
     pub fn start(&mut self) -> Result<()> {
-        let mut config = CrashConfig::load()?;
+        log_info!("Starting proxy core: {}", self.core.name());
 
-        log_info!("Starting proxy core: {}", config.core.name());
-
-        let exe_path = config.core.exe_path(&config.config_dir);
+        let exe_path = self.core.exe_path(&self.config_dir);
 
         if !exe_path.exists() {
             return Err(CrashError::Process(format!(
@@ -135,21 +134,26 @@ impl CrashConfig {
             )));
         }
 
+        if get_pid(&self.core.exe_name()).is_ok() {
+            log_info!("Skip starting proxy core: {}", self.core.name());
+            return Ok(());
+        }
+
         let args = vec![
             "-f".to_string(),
-            config.config_path().to_string_lossy().to_string(),
+            self.config_path().to_string_lossy().to_string(),
             "-ext-ctl".to_string(),
-            config.web.host.clone(),
+            self.web.host.clone(),
             "-ext-ui".to_string(),
-            config.web.ui_name().to_string(),
+            self.web.ui_name().to_string(),
             "-d".to_string(),
-            config.config_dir.to_string_lossy().to_string(),
+            self.config_dir.to_string_lossy().to_string(),
         ];
 
         start(&exe_path, args)?;
 
-        config.start_time = current_timestamp();
-        config.save()?;
+        self.start_time = current_timestamp();
+        self.save()?;
 
         log_info!("Proxy core started successfully");
         Ok(())
