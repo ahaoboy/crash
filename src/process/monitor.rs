@@ -81,16 +81,10 @@ pub fn format_status(config: &CrashConfig) -> String {
 
         // Memory usage (Unix only)
         if let Ok(memory) = get_memory_usage(pid) {
+            let kb = if cfg!(windows) { 1024 } else { 1 };
             lines.push((
                 "memory",
-                humansize::format_size(
-                    memory,
-                    if cfg!(windows) {
-                        humansize::WINDOWS
-                    } else {
-                        humansize::DECIMAL
-                    },
-                ),
+                humansize::format_size(kb * memory, humansize::DECIMAL),
             ));
         }
     }
