@@ -5,10 +5,12 @@ use crate::download::download_file;
 use crate::error::Result;
 use crate::utils::fs::file_exists;
 use crate::{log_info, log_warn};
-use std::path::Path;
 
 /// Update configuration file from URL
-pub async fn update_config(url: &str, dest: &Path, force: bool) -> Result<()> {
+pub async fn update_config(force: bool) -> Result<()> {
+    let config = CrashConfig::load()?;
+    let dest = &config.config_path();
+    let url = &config.url;
     if file_exists(dest) && !force {
         log_info!("Configuration file already exists at {}", dest.display());
         return Ok(());
@@ -18,6 +20,11 @@ pub async fn update_config(url: &str, dest: &Path, force: bool) -> Result<()> {
 
     download_file(url, dest).await?;
 
+    let s = std::fs::read_to_string(dest)?;
+    let patch_s = config.core.patch_config(&s);
+    if s != patch_s {
+        std::fs::write(dest, patch_s)?;
+    }
     log_info!("Configuration updated successfully");
     Ok(())
 }

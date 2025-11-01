@@ -166,18 +166,7 @@ fn handle_url(url: String) -> Result<()> {
 async fn handle_update_url(force: bool) -> Result<()> {
     log_info!("Updating configuration from URL (force: {})", force);
 
-    let (url, dest) = {
-        let config = CrashConfig::load()?;
-        if config.url.is_empty() {
-            return Err(CrashError::Config(
-                "Configuration URL not set. Use 'url' command first.".to_string(),
-            ));
-        }
-
-        (config.url.clone(), config.config_path())
-    }; // Lock is dropped here
-
-    update_config(&url, &dest, force).await?;
+    update_config(force).await?;
 
     println!("Configuration updated successfully!");
     Ok(())

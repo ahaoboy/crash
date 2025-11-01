@@ -84,4 +84,33 @@ impl Core {
             name: filename,
         })
     }
+
+    pub fn patch_config(&self, config: &str) -> String {
+        match self {
+            Core::Mihomo => {
+                let has_tun = config.lines().any(|i| i.starts_with("tun"));
+                if has_tun {
+                    config.to_string()
+                } else {
+                    format!(
+                        "{}\n{}",
+                        config,
+                        r#"
+# Crash default tun
+tun:
+  enable: true
+  stack: mixed
+  dns-hijack:
+    - "any:53"
+    - "tcp://any:53"
+  auto-route: true
+  auto-redirect: true
+  auto-detect-interface: true
+"#
+                    )
+                }
+            }
+            _ => config.to_string(),
+        }
+    }
 }
