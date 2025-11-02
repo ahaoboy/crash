@@ -98,7 +98,7 @@ pub fn format_status(config: &CrashConfig) -> String {
 
     // Status and uptime
     let status_icon = if is_running { "✅" } else { "❌" };
-    let uptime = if is_running {
+    let uptime = if is_running && config.start_time > 0 {
         format_uptime(config.start_time)
     } else {
         "0s".to_string()
