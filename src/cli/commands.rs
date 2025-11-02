@@ -39,7 +39,6 @@ async fn handle_install(force: bool) -> Result<()> {
     handle_task()?;
     println!("Installation completed successfully!");
 
-    handle_status()?;
     Ok(())
 }
 
@@ -62,6 +61,8 @@ fn handle_start(force:bool) -> Result<()> {
     CrashConfig::load()?.start(force)?;
 
     println!("Proxy service started successfully!");
+
+    handle_status()?;
     Ok(())
 }
 
