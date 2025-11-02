@@ -372,9 +372,7 @@ parse_arguments() {
 # Args: path
 # Returns: absolute path
 resolve_path() {
-  local path="$1"
-  local abs_path=$(eval "readlink -f ${EI_DIR}")
-  echo $abs_path
+  sh -c "(cd $1 2>/dev/null && pwd -P) || return 1;"
 }
 
 resolve_windows_path() {
@@ -583,13 +581,9 @@ setup_install_dir() {
   if [ "$os_type" = "Windows" ]; then
     powershell -c "New-Item -Path '$EI_DIR' -ItemType Directory -Force | Out-Null"
   else
-    if [ ! -d "$EI_DIR" ]; then
-      mkdir -p "$EI_DIR" 2>/dev/null || {
-        echo "ERROR: Cannot create directory: $EI_DIR"
-        echo "Please check permissions or specify a different directory."
-        exit 1
-      }
-    fi
+    # abs_path=$(resolve_path $EI_DIR)
+    # mkdir -p $abs_path
+    sh -c "mkdir -p $EI_DIR"
   fi
 }
 
@@ -751,7 +745,7 @@ main() {
   # Setup installation directory
   setup_install_dir "$OS_TYPE"
   local abs_path=$(resolve_path $EI_DIR)
-  echo "Installation directory: $abs_path"
+  echo "Installation directory: $abs_path" $EI_DIR
 
   # Create temporary download directory
   if command -v mktemp >/dev/null 2>&1; then
