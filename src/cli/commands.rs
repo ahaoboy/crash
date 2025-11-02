@@ -3,10 +3,12 @@
 use crate::cli::Commands;
 use crate::config::CrashConfig;
 use crate::core::updater::{update_config, update_geo};
-use crate::error::{CrashError, Result};
+use crate::error::CrashError;
 use crate::log_info;
 use crate::platform::command::execute;
 use crate::process::monitor::format_status;
+use anyhow::Result;
+use clap::Parser;
 use github_proxy::Proxy;
 use std::str::FromStr;
 
@@ -14,7 +16,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
     match command {
         Some(Commands::Install { force }) => handle_install(force).await,
         Some(Commands::Proxy { proxy }) => handle_proxy(proxy),
-        Some(Commands::Start{force}) => handle_start(force),
+        Some(Commands::Start { force }) => handle_start(force),
         Some(Commands::Stop) => handle_stop(),
         Some(Commands::Status) => handle_status(),
         Some(Commands::Task) => handle_task(),
@@ -27,6 +29,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::Ui { ui }) => handle_ui(ui),
         Some(Commands::Host { host }) => handle_host(host),
         Some(Commands::Secret { secret }) => handle_secret(secret),
+        Some(Commands::Ei { args }) => handle_ei(args).await,
         None => handle_status(),
     }
 }
@@ -42,6 +45,13 @@ async fn handle_install(force: bool) -> Result<()> {
     Ok(())
 }
 
+async fn handle_ei(args: Vec<String>) -> Result<()> {
+    log_info!("Executing ei command (args: {:?})", args);
+    let mut v = vec!["ei".to_string()];
+    v.extend(args);
+    easy_install::run_main(easy_install::Args::parse_from(v)).await
+}
+
 /// Handle proxy command
 fn handle_proxy(proxy: Proxy) -> Result<()> {
     log_info!("Setting proxy to: {}", proxy);
@@ -55,7 +65,7 @@ fn handle_proxy(proxy: Proxy) -> Result<()> {
 }
 
 /// Handle start command
-fn handle_start(force:bool) -> Result<()> {
+fn handle_start(force: bool) -> Result<()> {
     log_info!("Executing start command");
 
     CrashConfig::load()?.start(force)?;

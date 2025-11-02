@@ -138,7 +138,7 @@ tun:
                     )
                 }
             }
-            Core::Clash => return config.replace("- 'RULE-SET,", "#- 'RULE-SET,").to_string(),
+            Core::Clash => config.replace("- 'RULE-SET,", "#- 'RULE-SET,").to_string(),
             _ => config.to_string(),
         }
     }

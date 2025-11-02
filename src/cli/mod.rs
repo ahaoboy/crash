@@ -91,4 +91,9 @@ pub enum Commands {
         /// Secret key for authentication
         secret: String,
     },
+
+    #[command(trailing_var_arg = true, allow_hyphen_values = true)]
+    Ei {
+        args: Vec<String>,
+    },
 }
