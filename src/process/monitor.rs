@@ -65,7 +65,14 @@ pub fn get_memory_usage(pid: u32) -> Result<u64> {
 
 /// Format a comprehensive status string for the application
 pub fn format_status(config: &CrashConfig) -> String {
-    let mut lines = vec![("version", env!("CARGO_PKG_VERSION").to_string())];
+    let mut lines = vec![(
+        "version",
+        format!(
+            "{} ({})",
+            env!("CARGO_PKG_VERSION"),
+            "https://github.com/ahaoboy/crash"
+        ),
+    )];
     let exe = config.core.exe_name();
 
     let core_name = config.core.name();
