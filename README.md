@@ -40,6 +40,18 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/crash/main/install.s
 bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/crash/main/install.sh) --proxy jsdelivr
 ```
 
+### crash-assets
+
+https://github.com/ahaoboy/crash-assets
+
+
+```bash
+curl -fsSL https://cdn.jsdelivr.net/gh/ahaoboy/crash@main/install.sh | sh -s -- --proxy jsdelivr
+
+curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/crash-assets/blob/main/install.sh | sh -s -- --proxy gh-proxy
+```
+
+
 ### Custom Installation Directory
 
 ```bash
