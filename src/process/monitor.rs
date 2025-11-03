@@ -79,12 +79,7 @@ pub fn format_status(config: &CrashConfig) -> String {
     if let Ok(ver) = config.get_version() {
         lines.push((
             "core",
-            format!(
-                "{} {} ({})",
-                core_name,
-                ver,
-                config.core.github(),
-            ),
+            format!("{} {} ({})", core_name, ver, config.core.github(),),
         ));
     }
 

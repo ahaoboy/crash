@@ -5,7 +5,6 @@ use crate::platform::path::exe_extension;
 use github_proxy::Resource;
 use guess_target::Target;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use strum::{Display, EnumString, IntoStaticStr};
 
@@ -130,54 +129,11 @@ impl Core {
         }
     }
 
-    pub fn patch_config(&self, config: &str) -> String {
+    pub fn envs(&self) -> Vec<(&'static str, &'static str)> {
         match self {
-            Core::Mihomo => {
-                let has_tun = config.lines().any(|i| i.starts_with("tun"));
-                if has_tun {
-                    config.to_string()
-                } else {
-                    format!(
-                        "{}\n{}",
-                        config,
-                        r#"
-# Crash default tun
-tun:
-  enable: true
-  device: Meta
-  stack: gVisor
-  dns-hijack:
-    - 0.0.0.0:53
-  auto-route: true
-  auto-detect-interface: true
-  gso-max-size: 65536
-  file-descriptor: 0
-  recvmsgx: true
-"#
-                    )
-                }
-            }
-            Core::Clash => config.replace("- 'RULE-SET,", "#- 'RULE-SET,").to_string(),
-            Core::Singbox => {
-                let Ok(mut v) = serde_json::from_str::<Value>(&config) else {
-                    return config.to_string();
-                };
-
-                // FATAL[0000] decode config at ./Singbox.json: outbounds[5].server_port: json: cannot unmarshal string into Go value of type uint16
-                if let Some(outbounds) = v.get_mut("outbounds").and_then(|o| o.as_array_mut()) {
-                    for item in outbounds {
-                        if let Some(port_val) = item.get_mut("server_port") {
-                            if let Some(port_str) = port_val.as_str() {
-                                if let Ok(port_num) = port_str.parse::<u64>() {
-                                    *port_val = json!(port_num);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                serde_json::to_string_pretty(&v).unwrap_or(config.to_string())
-            }
+            Core::Mihomo => vec![],
+            Core::Clash => vec![],
+            Core::Singbox => vec![("ENABLE_DEPRECATED_SPECIAL_OUTBOUNDS", "true")],
         }
     }
 }

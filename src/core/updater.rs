@@ -21,7 +21,7 @@ pub async fn update_config(force: bool) -> Result<()> {
     download_file(url, dest).await?;
 
     let s = std::fs::read_to_string(dest)?;
-    let patch_s = config.core.patch_config(&s);
+    let patch_s = config.patch_config(&s);
     if s != patch_s {
         std::fs::write(dest, patch_s)?;
     }

@@ -11,6 +11,7 @@ use crate::{log_debug, log_info};
 use github_proxy::{Proxy, Resource};
 use guess_target::Target;
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use std::path::PathBuf;
 
 pub mod core;
@@ -164,7 +165,7 @@ impl CrashConfig {
             }
         };
 
-        start(&exe_path, args)?;
+        start(&exe_path, args, self.core.envs())?;
 
         self.start_time = current_timestamp();
         self.save()?;
@@ -207,7 +208,7 @@ impl CrashConfig {
             self.config_dir.to_string_lossy().to_string(),
         ];
 
-        restart(&exe_name, &exe_path, args)?;
+        restart(&exe_name, &exe_path, args, self.core.envs())?;
 
         let _config = CrashConfig::load()?;
 
@@ -415,6 +416,85 @@ impl CrashConfig {
 
         log_info!("GeoIP databases installed successfully");
         Ok(())
+    }
+
+    pub fn patch_config(&self, config: &str) -> String {
+        match self.core {
+            Core::Mihomo => {
+                let has_tun = config.lines().any(|i| i.starts_with("tun"));
+                if has_tun {
+                    config.to_string()
+                } else {
+                    format!(
+                        "{}\n{}",
+                        config,
+                        r#"
+# Crash default tun
+tun:
+  enable: true
+  device: Meta
+  stack: gVisor
+  dns-hijack:
+    - 0.0.0.0:53
+  auto-route: true
+  auto-detect-interface: true
+  gso-max-size: 65536
+  file-descriptor: 0
+  recvmsgx: true
+"#
+                    )
+                }
+            }
+            Core::Clash => config.replace("- 'RULE-SET,", "#- 'RULE-SET,").to_string(),
+            Core::Singbox => {
+                let Ok(mut v) = serde_json::from_str::<Value>(config) else {
+                    return config.to_string();
+                };
+
+                // FATAL[0000] decode config at ./Singbox.json: outbounds[5].server_port: json: cannot unmarshal string into Go value of type uint16
+                if let Some(outbounds) = v.get_mut("outbounds").and_then(|o| o.as_array_mut()) {
+                    for item in outbounds {
+                        if let Some(port_val) = item.get_mut("server_port")
+                            && let Some(port_str) = port_val.as_str()
+                                && let Ok(port_num) = port_str.parse::<u64>() {
+                                    *port_val = json!(port_num);
+                                }
+                    }
+                }
+
+                fn merge_json(dst: &mut Value, src: &Value) {
+                    if let (Value::Object(dst_map), Value::Object(src_map)) = (dst, src) {
+                        for (k, v) in src_map {
+                            match dst_map.get_mut(k) {
+                                Some(dst_v) => merge_json(dst_v, v),
+                                None => {
+                                    dst_map.insert(k.clone(), v.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                let ui = self.web.ui.to_string();
+                let secret = self.web.secret.to_string();
+                // clash_api
+                let patch = json!({
+                    "experimental": {
+                        "cache_file": {
+                            "enabled": true
+                        },
+                        "clash_api": {
+                            "external_controller": ":9090",
+                            "external_ui": ui,
+                            "secret": secret
+                        }
+                    }
+                });
+                merge_json(&mut v, &patch);
+
+                serde_json::to_string_pretty(&v).unwrap_or(config.to_string())
+            }
+        }
     }
 }
 

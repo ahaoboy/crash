@@ -8,7 +8,7 @@ use std::process::{Command, Stdio};
 pub mod monitor;
 use crate::platform::process::is_running;
 /// Start a process with the given executable path and arguments
-pub fn start(exe_path: &Path, args: Vec<String>) -> Result<()> {
+pub fn start(exe_path: &Path, args: Vec<String>, env: Vec<(&str, &str)>) -> Result<()> {
     log_info!(
         "Starting process: {} with args: {:?}",
         exe_path.display(),
@@ -24,6 +24,7 @@ pub fn start(exe_path: &Path, args: Vec<String>) -> Result<()> {
 
     Command::new(exe_path)
         .args(&args)
+        .envs(env)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -60,7 +61,12 @@ pub fn stop(exe_name: &str) -> Result<()> {
 }
 
 /// Restart a process
-pub fn restart(exe_name: &str, exe_path: &Path, args: Vec<String>) -> Result<()> {
+pub fn restart(
+    exe_name: &str,
+    exe_path: &Path,
+    args: Vec<String>,
+    env: Vec<(&str, &str)>,
+) -> Result<()> {
     log_info!("Restarting process: {}", exe_name);
 
     if is_running(exe_name) {
@@ -69,7 +75,7 @@ pub fn restart(exe_name: &str, exe_path: &Path, args: Vec<String>) -> Result<()>
         std::thread::sleep(std::time::Duration::from_millis(500));
     }
 
-    start(exe_path, args)?;
+    start(exe_path, args, env)?;
 
     log_info!("Process restarted successfully: {}", exe_name);
     Ok(())
