@@ -2,6 +2,7 @@
 
 use crate::cli::Commands;
 use crate::config::CrashConfig;
+use crate::config::core::Core;
 use crate::core::updater::{update_config, update_geo};
 use crate::error::CrashError;
 use crate::log_info;
@@ -19,6 +20,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::Start { force }) => handle_start(force),
         Some(Commands::Stop) => handle_stop(),
         Some(Commands::Status) => handle_status(),
+        Some(Commands::Core { core }) => handle_core(core),
         Some(Commands::Task) => handle_task(),
         Some(Commands::RunTask) => handle_run_task().await,
         Some(Commands::RemoveTask) => handle_remove_task(),
@@ -61,6 +63,16 @@ fn handle_proxy(proxy: Proxy) -> Result<()> {
     config.save()?;
 
     println!("Proxy set to: {}", config.proxy);
+    Ok(())
+}
+
+fn handle_core(core: Core) -> Result<()> {
+    log_info!("Executing core command");
+
+    let mut config = CrashConfig::load()?;
+    config.core = core;
+    config.save()?;
+
     Ok(())
 }
 

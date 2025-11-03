@@ -5,6 +5,7 @@ use crate::platform::path::exe_extension;
 use github_proxy::Resource;
 use guess_target::Target;
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use strum::{Display, EnumString, IntoStaticStr};
 
@@ -29,10 +30,19 @@ pub enum Core {
     Clash,
     Singbox,
 }
+
 impl Core {
     /// Get the core type name as a string
     pub fn name(&self) -> &'static str {
         self.into()
+    }
+
+    pub fn github(&self) -> &'static str {
+        match self {
+            Core::Mihomo => "https://github.com/MetaCubeX/mihomo",
+            Core::Clash => "https://github.com/Dreamacro/clash",
+            Core::Singbox => "https://github.com/SagerNet/sing-box",
+        }
     }
 
     /// Get the executable name with platform-specific extension
@@ -47,7 +57,10 @@ impl Core {
 
     /// Get the configuration file name
     pub fn config_file_name(&self) -> String {
-        format!("{}.yaml", self.name())
+        match self {
+            Core::Mihomo | Core::Clash => format!("{}.yaml", self.name()),
+            Core::Singbox => format!("{}.json", self.name()),
+        }
     }
 
     /// Get the platform-specific release file name
@@ -145,7 +158,26 @@ tun:
                 }
             }
             Core::Clash => config.replace("- 'RULE-SET,", "#- 'RULE-SET,").to_string(),
-            _ => config.to_string(),
+            Core::Singbox => {
+                let Ok(mut v) = serde_json::from_str::<Value>(&config) else {
+                    return config.to_string();
+                };
+
+                // FATAL[0000] decode config at ./Singbox.json: outbounds[5].server_port: json: cannot unmarshal string into Go value of type uint16
+                if let Some(outbounds) = v.get_mut("outbounds").and_then(|o| o.as_array_mut()) {
+                    for item in outbounds {
+                        if let Some(port_val) = item.get_mut("server_port") {
+                            if let Some(port_str) = port_val.as_str() {
+                                if let Ok(port_num) = port_str.parse::<u64>() {
+                                    *port_val = json!(port_num);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                serde_json::to_string_pretty(&v).unwrap_or(config.to_string())
+            }
         }
     }
 }

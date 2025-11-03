@@ -142,16 +142,27 @@ impl CrashConfig {
             }
         }
 
-        let args = vec![
-            "-f".to_string(),
-            self.config_path().to_string_lossy().to_string(),
-            "-ext-ctl".to_string(),
-            self.web.host.clone(),
-            "-ext-ui".to_string(),
-            self.web.ui_name().to_string(),
-            "-d".to_string(),
-            self.config_dir.to_string_lossy().to_string(),
-        ];
+        let args = match self.core {
+            Core::Mihomo | Core::Clash => vec![
+                "-f".to_string(),
+                self.config_path().to_string_lossy().to_string(),
+                "-ext-ctl".to_string(),
+                self.web.host.clone(),
+                "-ext-ui".to_string(),
+                self.web.ui_name().to_string(),
+                "-d".to_string(),
+                self.config_dir.to_string_lossy().to_string(),
+            ],
+            Core::Singbox => {
+                vec![
+                    "run".to_string(),
+                    "-c".to_string(),
+                    self.config_path().to_string_lossy().to_string(),
+                    "-D".to_string(),
+                    self.config_dir.to_string_lossy().to_string(),
+                ]
+            }
+        };
 
         start(&exe_path, args)?;
 

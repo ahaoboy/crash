@@ -2,6 +2,8 @@
 
 use clap::{Parser, Subcommand};
 use github_proxy::Proxy;
+
+use crate::config::core::Core;
 pub mod commands;
 pub mod output;
 // pub use output::OutputFormatter;
@@ -39,6 +41,10 @@ pub enum Commands {
 
     /// Stop the proxy service
     Stop,
+
+    Core {
+        core: Core,
+    },
 
     /// Show service status
     Status,
