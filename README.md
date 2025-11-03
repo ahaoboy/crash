@@ -51,6 +51,8 @@ curl -fsSL https://cdn.jsdelivr.net/gh/ahaoboy/crash@main/install.sh | sh -s -- 
 curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/crash-assets/blob/main/install.sh | sh -s -- --proxy gh-proxy
 
 curl -fsSL https://cdn.statically.io/gh/ahaoboy/crash-assets/main/install.sh  | sh -s -- --proxy statically
+
+curl -fsSL https://xget.xi-xu.me/gh/ahaoboy/crash-assets/raw/refs/heads/main/install.sh  | sh -s -- --proxy xget
 ```
 
 
