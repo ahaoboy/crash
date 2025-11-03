@@ -77,7 +77,15 @@ pub fn format_status(config: &CrashConfig) -> String {
 
     let core_name = config.core.name();
     if let Ok(ver) = config.get_version() {
-        lines.push(("core", format!("{}({})", core_name, ver)));
+        lines.push((
+            "core",
+            format!(
+                "{} {} ({})",
+                core_name,
+                ver,
+                config.core.github(),
+            ),
+        ));
     }
 
     let mut is_running = false;
@@ -112,10 +120,6 @@ pub fn format_status(config: &CrashConfig) -> String {
     };
     lines.push(("status", format!("{} {}", status_icon, uptime)));
     lines.push(("proxy", config.proxy.to_string()));
-    lines.push((
-        "core",
-        format!("{} ({})", config.core, config.core.github(),),
-    ));
     lines.push(("config", config.config_dir.to_string_lossy().to_string()));
 
     let key_len = lines.iter().fold(0, |a, b| a.max(b.0.len()));
