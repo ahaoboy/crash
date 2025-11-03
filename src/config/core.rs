@@ -56,15 +56,21 @@ impl Core {
 
         let filename = match (self, target) {
             (Mihomo, Target::X86_64PcWindowsMsvc | Target::X86_64PcWindowsGnu) => {
-                "mihomo-windows-amd64-v1.19.15.tar.xz"
+                "mihomo-windows-amd64-v1.19.15.tar.gz"
             }
-            (Mihomo, Target::Aarch64UnknownLinuxMusl) => "mihomo-linux-arm64-v1.19.15.tar.xz",
-            (Mihomo, Target::X86_64UnknownLinuxGnu) => "mihomo-linux-amd64-v1.19.15.tar.xz",
-            (Mihomo, Target::Aarch64AppleDarwin) => "mihomo-darwin-arm64-v1.19.15.tar.xz",
-            (Mihomo, Target::X86_64AppleDarwin) => "mihomo-darwin-amd64-v1.19.15.tar.xz",
+            (Mihomo, Target::Aarch64UnknownLinuxMusl) => "mihomo-linux-arm64-v1.19.15.tar.gz",
+            (Mihomo, Target::X86_64UnknownLinuxGnu) => "mihomo-linux-amd64-v1.19.15.tar.gz",
+            (Mihomo, Target::Aarch64AppleDarwin) => "mihomo-darwin-arm64-v1.19.15.tar.gz",
+            (Mihomo, Target::X86_64AppleDarwin) => "mihomo-darwin-amd64-v1.19.15.tar.gz",
 
-            (Clash, Target::Aarch64UnknownLinuxMusl) => "clash-linux-arm64.tar.xz",
-            (Clash, Target::X86_64UnknownLinuxGnu) => "clash-linux-amd64.tar.xz",
+            (Clash, Target::Aarch64UnknownLinuxMusl) => "clash-linux-arm64.tar.gz",
+            (Clash, Target::X86_64UnknownLinuxGnu) => "clash-linux-amd64.tar.gz",
+
+            (Singbox, Target::X86_64PcWindowsMsvc | Target::X86_64PcWindowsGnu) => {
+                "sing-box-1.12.12-windows-amd64.tar.gz"
+            }
+            (Singbox, Target::Aarch64UnknownLinuxMusl) => "sing-box-1.12.12-linux-arm64.tar.gz",
+            (Singbox, Target::X86_64UnknownLinuxGnu) => "sing-box-1.12.12-linux-amd64.tar.gz",
             _ => {
                 return Err(CrashError::Config(format!(
                     "Unsupported core type {:?} on target {:?}",
@@ -91,9 +97,9 @@ impl Core {
     pub fn get_geo_files(&self) -> Vec<&'static str> {
         match self {
             Core::Mihomo | Core::Clash => vec![
-                "geoip.metadb.tar.xz",
-                "geoip.dat.tar.xz",
-                "geosite.dat.tar.xz",
+                "geoip.metadb.tar.gz",
+                "geoip.dat.tar.gz",
+                "geosite.dat.tar.gz",
             ],
             // Core::Clash => vec![
             //     "china_ip_list.txt",
