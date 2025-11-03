@@ -82,7 +82,7 @@ cargo install --path .
 crash install
 
 # Force reinstallation
-crash install --force
+crash install -f
 ```
 
 ### Configuration Management
@@ -92,7 +92,7 @@ crash install --force
 crash url <config-url>
 
 # Update configuration from URL
-crash update-url
+crash update-url -f
 
 # Update configuration from saved URL
 crash update
