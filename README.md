@@ -30,8 +30,8 @@ If GitHub access is slow, use a mirror:
 # Using gh-proxy mirror
 bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/crash/main/install.sh) --proxy gh-proxy
 
-sh <(curl -fsSL https://gh-proxy.com/https://raw.githubusercontent.com/ahaoboy/crash/main/install.sh) --proxy gh-proxy
-
+curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/crash/blob/main/install.sh | sh -s -- --proxy gh-proxy
+curl -fsSL https://xget.xi-xu.me/gh/ahaoboy/crash/raw/refs/heads/main/install.sh | sh -s -- --proxy xget
 
 # Using xget mirror
 bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/crash/main/install.sh) --proxy xget

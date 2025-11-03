@@ -495,6 +495,9 @@ generate_download_url() {
     github_url="https://github.com/${owner}/${repo}/releases/download/${tag}/${filename}"
   fi
 
+  # echo $proxy $owner $repo $tag $filename
+  # echo $github_url
+
   # Apply proxy transformation
   case "$proxy" in
     github)
