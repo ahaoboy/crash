@@ -46,7 +46,7 @@ https://github.com/ahaoboy/crash-assets
 
 
 ```bash
-curl -fsSL https://cdn.jsdelivr.net/gh/ahaoboy/crash@main/install.sh | sh -s -- --proxy jsdelivr
+curl -fsSL https://cdn.jsdelivr.net/gh/ahaoboy/crash-assets@main/install.sh | sh -s -- --proxy jsdelivr
 
 curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/crash-assets/blob/main/install.sh | sh -s -- --proxy gh-proxy
 
@@ -55,6 +55,14 @@ curl -fsSL https://cdn.statically.io/gh/ahaoboy/crash-assets/main/install.sh  | 
 curl -fsSL https://xget.xi-xu.me/gh/ahaoboy/crash-assets/raw/refs/heads/main/install.sh  | sh -s -- --proxy xget
 ```
 
+### asusrouter
+
+
+```bash
+
+curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/crash-assets/blob/main/install.sh | sh -s -- --proxy gh-proxy --dir /jffs
+
+```
 
 ### Custom Installation Directory
 
@@ -159,6 +167,16 @@ crash proxy direct      # Direct connection
 crash proxy ghproxy     # gh-proxy mirror
 crash proxy xget        # xget mirror
 crash proxy jsdelivr    # jsdelivr CDN
+```
+
+### ei
+
+```bash
+
+crash ei ahaoboy/coreutils-build --name mktemp
+
+crash ei ilai-deutel/kibi --proxy gh-proxy
+
 ```
 
 ## Configuration File
