@@ -98,11 +98,11 @@ impl Core {
     pub fn repo(&self, target: &Target) -> Result<Resource> {
         let filename = self.release_file_name(target)?;
 
-        Ok(Resource::Release {
+        Ok(Resource::File {
             owner: "ahaoboy".to_string(),
             repo: "crash-assets".to_string(),
-            tag: "nightly".to_string(),
-            name: filename,
+            reference: "main".to_string(),
+            path: filename.to_string(),
         })
     }
 
