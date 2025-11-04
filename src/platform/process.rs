@@ -25,7 +25,6 @@ pub fn get_pid(name: &str) -> Result<u32> {
     let output = execute("pidof", &[name])?;
 
     let pid_str = output
-        .trim()
         .split_whitespace()
         .next()
         .ok_or_else(|| CrashError::Process(format!("No process found with name: {}", name)))?;
@@ -34,6 +33,7 @@ pub fn get_pid(name: &str) -> Result<u32> {
         .parse::<u32>()
         .map_err(|e| CrashError::Process(format!("Failed to parse PID '{}': {}", pid_str, e)))
 }
+
 #[cfg(unix)]
 pub fn kill_process(name_or_path: &str) -> Result<()> {
     let process_name = Path::new(name_or_path)
@@ -42,7 +42,11 @@ pub fn kill_process(name_or_path: &str) -> Result<()> {
         .unwrap_or(name_or_path);
 
     // Try pkill first
-    if let Ok(_) = Command::new("pkill").args(&["-f", process_name]).output() {
+    if Command::new("pkill")
+        .args(["-f", process_name])
+        .output()
+        .is_ok()
+    {
         return Ok(());
     }
 

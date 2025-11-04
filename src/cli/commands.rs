@@ -132,7 +132,7 @@ fn handle_task() -> Result<()> {
     let exe_path = exe.to_string_lossy();
 
     if which("crontab").is_err() {
-        return Err(CrashError::Platform(format!("crontab not found")).into());
+        return Err(CrashError::Platform("crontab not found".to_string()).into());
     }
 
     let user = get_user();
@@ -142,11 +142,10 @@ fn handle_task() -> Result<()> {
         "/var/spool/cron",
     ] {
         let p = format!("{}/{}", d, user);
-        if std::fs::exists(d).unwrap_or(false) && !std::fs::exists(&p).unwrap_or(false) {
-            if std::fs::write(p, "").is_ok() {
+        if std::fs::exists(d).unwrap_or(false) && !std::fs::exists(&p).unwrap_or(false)
+            && std::fs::write(p, "").is_ok() {
                 break;
             }
-        }
     }
 
     for (cron, subcmd) in [("0 3 * * 3", "run-task"), ("*/10 * * * *", "start")] {

@@ -6,7 +6,7 @@ use crate::platform::command::execute;
 use crate::platform::process::get_pid;
 use crate::process::{restart, start, stop};
 use crate::utils::fs::{atomic_write, ensure_dir};
-use crate::utils::{current_timestamp, file_exists};
+use crate::utils::{current_timestamp, file_exists, get_dir_size};
 use crate::{log_debug, log_info};
 use github_proxy::{Proxy, Resource};
 use guess_target::Target;
@@ -456,9 +456,10 @@ tun:
                     for item in outbounds {
                         if let Some(port_val) = item.get_mut("server_port")
                             && let Some(port_str) = port_val.as_str()
-                                && let Ok(port_num) = port_str.parse::<u64>() {
-                                    *port_val = json!(port_num);
-                                }
+                            && let Ok(port_num) = port_str.parse::<u64>()
+                        {
+                            *port_val = json!(port_num);
+                        }
                     }
                 }
 
@@ -495,6 +496,10 @@ tun:
                 serde_json::to_string_pretty(&v).unwrap_or(config.to_string())
             }
         }
+    }
+
+    pub fn get_size(&self) -> u64 {
+        get_dir_size(&self.config_dir)
     }
 }
 

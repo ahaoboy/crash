@@ -24,11 +24,10 @@ pub fn get_memory_usage(pid: u32) -> Result<u64> {
     for line in output.lines() {
         if line.starts_with("VmRSS:") {
             let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 2 {
-                if let Ok(kb) = parts[1].parse::<u64>() {
+            if parts.len() >= 2
+                && let Ok(kb) = parts[1].parse::<u64>() {
                     return Ok(kb * 1024); // Convert KB to bytes
                 }
-            }
         }
     }
 
@@ -116,8 +115,15 @@ pub fn format_status(config: &CrashConfig) -> String {
     };
     lines.push(("status", format!("{} {}", status_icon, uptime)));
     lines.push(("proxy", config.proxy.to_string()));
-    lines.push(("config", config.config_dir.to_string_lossy().to_string()));
     lines.push(("user", get_user()));
+    lines.push((
+        "config",
+        format!(
+            "{} ({})",
+            config.config_dir.to_string_lossy(),
+            humansize::format_size(config.get_size(), humansize::DECIMAL)
+        ),
+    ));
 
     let key_len = lines.iter().fold(0, |a, b| a.max(b.0.len()));
     lines
