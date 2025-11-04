@@ -142,10 +142,12 @@ fn handle_task() -> Result<()> {
         "/var/spool/cron",
     ] {
         let p = format!("{}/{}", d, user);
-        if std::fs::exists(d).unwrap_or(false) && !std::fs::exists(&p).unwrap_or(false)
-            && std::fs::write(p, "").is_ok() {
-                break;
-            }
+        if std::fs::exists(d).unwrap_or(false)
+            && !std::fs::exists(&p).unwrap_or(false)
+            && std::fs::write(p, "").is_ok()
+        {
+            break;
+        }
     }
 
     for (cron, subcmd) in [("0 3 * * 3", "run-task"), ("*/10 * * * *", "start")] {

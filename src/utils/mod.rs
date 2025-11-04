@@ -29,12 +29,13 @@ pub fn get_dir_size(path: &Path) -> u64 {
     {
         if let Ok(output) = Command::new("du").arg("-s").arg(path).output()
             && output.status.success()
-                && let Some(size_str) = String::from_utf8_lossy(&output.stdout)
-                    .split_whitespace()
-                    .next()
-                    && let Ok(size) = size_str.parse::<u64>() {
-                        return size * 1024;
-                    }
+            && let Some(size_str) = String::from_utf8_lossy(&output.stdout)
+                .split_whitespace()
+                .next()
+            && let Ok(size) = size_str.parse::<u64>()
+        {
+            return size * 1024;
+        }
     }
 
     #[cfg(target_os = "macos")]
@@ -64,15 +65,11 @@ pub fn get_dir_size(path: &Path) -> u64 {
                 ),
             ])
             .output()
-        {
-            if output.status.success() {
-                if let Ok(size_str) = String::from_utf8(output.stdout) {
-                    if let Ok(size) = size_str.trim().parse::<u64>() {
+            && output.status.success()
+                && let Ok(size_str) = String::from_utf8(output.stdout)
+                    && let Ok(size) = size_str.trim().parse::<u64>() {
                         return size;
                     }
-                }
-            }
-        }
     }
 
     fn fallback_size(path: &Path) -> u64 {
@@ -92,4 +89,15 @@ pub fn get_dir_size(path: &Path) -> u64 {
     }
 
     fallback_size(path)
+}
+
+pub fn format_size(n: u64) -> String {
+    humansize::format_size(
+        n,
+        if cfg!(windows) {
+            humansize::WINDOWS
+        } else {
+            humansize::DECIMAL
+        },
+    )
 }

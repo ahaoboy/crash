@@ -4,8 +4,8 @@ use crate::config::CrashConfig;
 use crate::error::Result;
 use crate::platform::command::execute;
 use crate::platform::process::get_pid;
-use crate::utils::get_user;
 use crate::utils::time::{current_timestamp, format_uptime};
+use crate::utils::{format_size, get_user};
 use std::time::Duration;
 
 /// Calculate process uptime from start timestamp
@@ -25,9 +25,10 @@ pub fn get_memory_usage(pid: u32) -> Result<u64> {
         if line.starts_with("VmRSS:") {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() >= 2
-                && let Ok(kb) = parts[1].parse::<u64>() {
-                    return Ok(kb * 1024); // Convert KB to bytes
-                }
+                && let Ok(kb) = parts[1].parse::<u64>()
+            {
+                return Ok(kb * 1024); // Convert KB to bytes
+            }
         }
     }
 
@@ -92,10 +93,7 @@ pub fn format_status(config: &CrashConfig) -> String {
         // Memory usage (Unix only)
         if let Ok(memory) = get_memory_usage(pid) {
             let kb = if cfg!(windows) { 1024 } else { 1 };
-            lines.push((
-                "memory",
-                humansize::format_size(kb * memory, humansize::DECIMAL),
-            ));
+            lines.push(("memory", format_size(kb * memory)));
         }
     }
 
@@ -121,7 +119,7 @@ pub fn format_status(config: &CrashConfig) -> String {
         format!(
             "{} ({})",
             config.config_dir.to_string_lossy(),
-            humansize::format_size(config.get_size(), humansize::DECIMAL)
+            format_size(config.get_size(),)
         ),
     ));
 
