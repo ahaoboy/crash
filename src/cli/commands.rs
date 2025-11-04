@@ -72,7 +72,7 @@ fn handle_core(core: Core) -> Result<()> {
     let mut config = CrashConfig::load()?;
     config.core = core;
     config.save()?;
-
+    println!("Core set to: {}", core);
     Ok(())
 }
 
@@ -146,6 +146,7 @@ fn handle_task() -> Result<()> {
 
     Ok(())
 }
+
 #[cfg(windows)]
 fn handle_task() -> Result<()> {
     log_info!("Executing task command");

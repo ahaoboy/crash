@@ -4,6 +4,7 @@ use crate::config::CrashConfig;
 use crate::error::Result;
 use crate::platform::command::execute;
 use crate::platform::process::get_pid;
+use crate::utils::get_user;
 use crate::utils::time::{current_timestamp, format_uptime};
 use std::time::Duration;
 
@@ -116,6 +117,7 @@ pub fn format_status(config: &CrashConfig) -> String {
     lines.push(("status", format!("{} {}", status_icon, uptime)));
     lines.push(("proxy", config.proxy.to_string()));
     lines.push(("config", config.config_dir.to_string_lossy().to_string()));
+    lines.push(("user", get_user()));
 
     let key_len = lines.iter().fold(0, |a, b| a.max(b.0.len()));
     lines
