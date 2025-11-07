@@ -98,6 +98,12 @@ pub enum Commands {
         secret: String,
     },
 
+    /// Set maximum runtime in hours before automatic restart (0 = disabled)
+    MaxRuntime {
+        /// Maximum runtime in hours (0 to disable)
+        hours: u64,
+    },
+
     #[command(trailing_var_arg = true, allow_hyphen_values = true)]
     Ei {
         args: Vec<String>,

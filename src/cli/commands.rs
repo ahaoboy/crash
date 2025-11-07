@@ -31,6 +31,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::Ui { ui }) => handle_ui(ui),
         Some(Commands::Host { host }) => handle_host(host),
         Some(Commands::Secret { secret }) => handle_secret(secret),
+        Some(Commands::MaxRuntime { hours }) => handle_max_runtime(hours),
         Some(Commands::Ei { args }) => handle_ei(args).await,
         None => handle_status(),
     }
@@ -379,5 +380,26 @@ fn handle_secret(secret: String) -> Result<()> {
     config.save()?;
 
     println!("Web secret updated successfully!");
+    Ok(())
+}
+
+/// Handle max-runtime command
+fn handle_max_runtime(hours: u64) -> Result<()> {
+    log_info!("Setting max runtime to: {} hours", hours);
+
+    let mut config = CrashConfig::load()?;
+
+    config.max_runtime_hours = hours;
+    config.save()?;
+
+    if hours == 0 {
+        println!("Maximum runtime disabled (process will run indefinitely)");
+    } else {
+        println!("Maximum runtime set to {} hours", hours);
+        println!(
+            "The proxy service will automatically restart after running for {} hours",
+            hours
+        );
+    }
     Ok(())
 }

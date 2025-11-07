@@ -111,7 +111,18 @@ pub fn format_status(config: &CrashConfig) -> String {
     } else {
         "0s".to_string()
     };
-    lines.push(("status", format!("{} {}", status_icon, uptime)));
+
+    // Add max runtime info to status if enabled
+    let status_text = if config.max_runtime_hours > 0 {
+        format!(
+            "{} {} (max: {}h)",
+            status_icon, uptime, config.max_runtime_hours
+        )
+    } else {
+        format!("{} {}", status_icon, uptime)
+    };
+
+    lines.push(("status", status_text));
     lines.push(("proxy", config.proxy.to_string()));
     lines.push(("user", get_user()));
     lines.push((

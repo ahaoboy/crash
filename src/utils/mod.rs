@@ -66,10 +66,11 @@ pub fn get_dir_size(path: &Path) -> u64 {
             ])
             .output()
             && output.status.success()
-                && let Ok(size_str) = String::from_utf8(output.stdout)
-                    && let Ok(size) = size_str.trim().parse::<u64>() {
-                        return size;
-                    }
+            && let Ok(size_str) = String::from_utf8(output.stdout)
+            && let Ok(size) = size_str.trim().parse::<u64>()
+        {
+            return size;
+        }
     }
 
     fn fallback_size(path: &Path) -> u64 {

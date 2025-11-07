@@ -34,6 +34,13 @@ pub struct CrashConfig {
     pub target: Target,
     pub web: WebConfig,
     pub url: String,
+    /// Maximum runtime in hours before automatic restart (0 = disabled)
+    #[serde(default = "default_max_runtime_hours")]
+    pub max_runtime_hours: u64,
+}
+
+fn default_max_runtime_hours() -> u64 {
+    12
 }
 
 impl Default for CrashConfig {
@@ -47,6 +54,7 @@ impl Default for CrashConfig {
             target: Target::default(),
             web: WebConfig::default(),
             url: String::new(),
+            max_runtime_hours: default_max_runtime_hours(),
         }
     }
 }
@@ -136,7 +144,27 @@ impl CrashConfig {
 
         if get_pid(&self.core.exe_name()).is_ok() {
             log_info!("Skip starting proxy core: {}", self.core.name());
-            if force {
+
+            // Check if max runtime has been exceeded
+            if self.max_runtime_hours > 0 && self.start_time > 0 {
+                let current_time = current_timestamp();
+                let runtime_seconds = current_time.saturating_sub(self.start_time);
+                let max_runtime_seconds = self.max_runtime_hours * 3600;
+
+                if runtime_seconds >= max_runtime_seconds {
+                    log_info!(
+                        "Process has been running for {} hours, exceeding max runtime of {} hours. Restarting...",
+                        runtime_seconds / 3600,
+                        self.max_runtime_hours
+                    );
+                    self.stop()?;
+                    // Continue to start the process below
+                } else if force {
+                    self.stop()?;
+                } else {
+                    return Ok(());
+                }
+            } else if force {
                 self.stop()?;
             } else {
                 return Ok(());
