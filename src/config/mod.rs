@@ -2,17 +2,18 @@
 
 use crate::config::core::Core;
 use crate::error::{CrashError, Result};
-use crate::platform::command::execute;
-use crate::platform::process::get_pid;
-use crate::process::{start, stop};
+use crate::utils::command::execute;
+use crate::utils::download::{download_file, download_text};
 use crate::utils::fs::{atomic_write, ensure_dir};
-use crate::utils::{current_timestamp, file_exists, get_dir_size, strip_suffix};
-use crate::{log_debug, log_info};
+use crate::utils::process::get_pid;
+use crate::utils::process::{start, stop};
+use crate::utils::{current_timestamp, file_exists, get_dir_size, is_url, strip_suffix};
+use crate::{log_debug, log_info, log_warn};
 use github_proxy::{Proxy, Resource};
 use guess_target::Target;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub mod core;
 pub mod web;
@@ -138,7 +139,9 @@ impl CrashConfig {
         log_info!("Starting proxy core: {}", self.core.name());
 
         if self.stop_force && !force {
-            return Err(CrashError::Process("Skip starting proxy core: run 'crash start -f' instead.".to_string()));
+            return Err(CrashError::Process(
+                "Skip starting proxy core: run 'crash start -f' instead.".to_string(),
+            ));
         }
 
         let exe_path = self.core.exe_path(&self.config_dir);
@@ -521,6 +524,120 @@ tun:
         .await
         .map_err(|e| CrashError::Download(e.to_string()))?;
 
+        Ok(())
+    }
+
+    pub async fn update_config(&self, force: bool) -> Result<()> {
+        let dest = &self.core_config_path();
+        let source = &self.url;
+
+        if file_exists(dest) && !force {
+            log_info!("Configuration file already exists at {}", dest.display());
+            return Ok(());
+        }
+
+        log_info!("Updating configuration from: {}", source);
+
+        let content = if is_url(source) {
+            // Download from URL
+            log_info!("Downloading configuration from URL: {}", source);
+            download_text(source).await.map_err(|e| {
+                CrashError::Config(format!("Failed to download configuration from URL: {}", e))
+            })?
+        } else {
+            // Read from local file
+            let source_path = Path::new(source);
+            if !source_path.exists() {
+                return Err(CrashError::Config(format!(
+                    "Configuration source not found: {} (not a valid URL or local file)",
+                    source
+                )));
+            }
+
+            log_info!("Reading configuration from local file: {}", source);
+            std::fs::read_to_string(source_path).map_err(|e| {
+                CrashError::Config(format!("Failed to read local configuration file: {}", e))
+            })?
+        };
+
+        // Apply patches to configuration
+        let patched_content = self.patch_config(&content);
+
+        // Write to destination
+        std::fs::write(dest, patched_content).map_err(|e| {
+            CrashError::Config(format!(
+                "Failed to write configuration to {}: {}",
+                dest.display(),
+                e
+            ))
+        })?;
+
+        log_info!("Configuration updated successfully");
+        Ok(())
+    }
+
+    pub async fn update_geo(&self, force: bool) -> Result<()> {
+        log_info!("Updating GeoIP databases (force: {})", force);
+
+        use crate::config::core::Core;
+        use github_proxy::Resource;
+
+        let databases = match self.core {
+            Core::Mihomo => vec!["geoip.metadb", "geoip.dat", "geosite.dat"],
+            Core::Clash => vec![
+                "china_ip_list.txt",
+                "china_ipv6_list.txt",
+                "cn_mini.mmdb",
+                "Country.mmdb",
+                "geoip_cn.db",
+                "geosite.dat",
+                "geosite_cn.db",
+                "mrs_geosite_cn.mrs",
+                "srs_geoip_cn.srs",
+                "srs_geosite_cn.srs",
+            ],
+            Core::Singbox => {
+                log_warn!("GeoIP database update not implemented for Singbox");
+                return Ok(());
+            }
+        };
+
+        for db_name in databases {
+            let db_path = self.config_dir.join(db_name);
+
+            if file_exists(&db_path) && !force {
+                log_info!("Database {} already exists, skipping", db_name);
+                continue;
+            }
+
+            log_info!("Updating GeoIP database: {}", db_name);
+
+            let resource = match self.core {
+                Core::Mihomo => Resource::Release {
+                    owner: "MetaCubeX".to_string(),
+                    repo: "meta-rules-dat".to_string(),
+                    tag: "latest".to_string(),
+                    name: db_name.to_string(),
+                },
+                Core::Clash => Resource::File {
+                    owner: "juewuy".to_string(),
+                    repo: "ShellCrash".to_string(),
+                    reference: "master".to_string(),
+                    path: format!("bin/geodata/{}", db_name),
+                },
+                Core::Singbox => continue,
+            };
+
+            let url = self.proxy.url(resource).ok_or_else(|| {
+                crate::error::CrashError::Download("Failed to get geo database URL".to_string())
+            })?;
+
+            download_file(&url, &db_path).await?;
+
+            log_info!("Updated {} successfully", db_name);
+        }
+
+        log_info!("GeoIP databases updated successfully");
         Ok(())
     }
 }

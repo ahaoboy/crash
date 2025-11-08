@@ -2,8 +2,8 @@
 
 use crate::config::CrashConfig;
 use crate::error::Result;
-use crate::platform::command::execute;
-use crate::platform::process::get_pid;
+use crate::utils::command::execute;
+use crate::utils::process::get_pid;
 use crate::utils::time::{current_timestamp, format_uptime};
 use crate::utils::{format_size, get_user};
 use std::time::Duration;

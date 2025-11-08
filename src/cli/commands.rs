@@ -3,11 +3,10 @@
 use crate::cli::Commands;
 use crate::config::core::Core;
 use crate::config::{CrashConfig, get_config_path};
-use crate::core::updater::{update_config, update_geo};
 use crate::error::CrashError;
 use crate::log_info;
-use crate::platform::command::execute;
-use crate::process::monitor::format_status;
+use crate::utils::command::execute;
+use crate::utils::monitor::format_status;
 use anyhow::Result;
 use clap::Parser;
 use github_proxy::Proxy;
@@ -301,8 +300,9 @@ fn handle_url(url: String) -> Result<()> {
 /// Handle update-url command
 async fn handle_update_url(force: bool) -> Result<()> {
     log_info!("Updating configuration from URL (force: {})", force);
+    let config = CrashConfig::load()?;
 
-    update_config(force).await?;
+    config.update_config(force).await?;
 
     println!("Configuration updated successfully!");
     Ok(())
@@ -312,9 +312,9 @@ async fn handle_update_url(force: bool) -> Result<()> {
 async fn handle_update_geo(force: bool) -> Result<()> {
     log_info!("Updating GeoIP databases (force: {})", force);
 
-    let config_clone = CrashConfig::load()?;
+    let config = CrashConfig::load()?;
 
-    update_geo(&config_clone, force).await?;
+    config.update_geo(force).await?;
 
     println!("GeoIP databases updated successfully!");
     Ok(())

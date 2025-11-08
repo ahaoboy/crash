@@ -1,12 +1,17 @@
 // Utility modules for shared functionality
+pub mod command;
+pub mod download;
 pub mod fs;
+pub mod monitor;
+pub mod path;
+pub mod process;
 pub mod time;
 pub use fs::{atomic_write, ensure_dir, file_exists};
 use std::path::Path;
 use std::process::Command;
 pub use time::{current_timestamp, format_uptime};
 
-use crate::platform::command::execute;
+use crate::utils::command::execute;
 
 pub fn get_user() -> String {
     if let Ok(v) = std::env::var("USER") {
@@ -115,4 +120,8 @@ pub fn strip_suffix(name: &str) -> &str {
     }
 
     name
+}
+
+pub fn is_url(s: &str) -> bool {
+    s.starts_with("http://") || s.starts_with("https://")
 }

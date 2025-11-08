@@ -3,12 +3,8 @@
 
 pub mod cli;
 pub mod config;
-pub mod core;
-pub mod download;
 pub mod error;
 pub mod log;
-pub mod platform;
-pub mod process;
 pub mod utils;
 
 // Re-export commonly used types

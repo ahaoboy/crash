@@ -1,7 +1,7 @@
 // Core-specific configuration
 
 use crate::error::{CrashError, Result};
-use crate::platform::path::exe_extension;
+use crate::utils::path::exe_extension;
 use github_proxy::Resource;
 use guess_target::Target;
 use serde::{Deserialize, Serialize};
