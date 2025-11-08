@@ -31,9 +31,9 @@ fn calculate_delay(attempt: u32) -> Duration {
     Duration::from_millis(capped_delay)
 }
 
-/// Download a file from URL to destination path with retry logic
-pub async fn download_file(url: &str, dest: &Path) -> Result<()> {
-    log_info!("Starting download from {} to {}", url, dest.display());
+/// Download text content from URL with retry logic
+pub async fn download_text(url: &str) -> Result<String> {
+    log_info!("Starting text download from {}", url);
 
     let mut attempt = 0;
     let mut last_error = None;
@@ -50,10 +50,10 @@ pub async fn download_file(url: &str, dest: &Path) -> Result<()> {
             tokio::time::sleep(delay).await;
         }
 
-        match download_attempt(url, dest).await {
-            Ok(_) => {
-                log_info!("Download completed successfully: {}", url);
-                return Ok(());
+        match download_text_attempt(url).await {
+            Ok(text) => {
+                log_info!("Text download completed successfully: {}", url);
+                return Ok(text);
             }
             Err(e) => {
                 log_error!("Download attempt {} failed: {}", attempt + 1, e);
@@ -67,8 +67,42 @@ pub async fn download_file(url: &str, dest: &Path) -> Result<()> {
         .unwrap_or_else(|| CrashError::Download("Download failed after all retries".to_string())))
 }
 
-/// Single download attempt
-async fn download_attempt(url: &str, dest: &Path) -> Result<()> {
+/// Download a file from URL to destination path with retry logic
+pub async fn download_file(url: &str, dest: &Path) -> Result<()> {
+    log_info!("Starting download from {} to {}", url, dest.display());
+
+    // Download text content
+    let text = download_text(url).await?;
+
+    // Write to file
+    log_debug!("Writing {} bytes to {}", text.len(), dest.display());
+
+    // Ensure parent directory exists
+    if let Some(parent) = dest.parent() {
+        crate::utils::fs::ensure_dir(parent)?;
+    }
+
+    std::fs::write(dest, &text).map_err(|e| {
+        CrashError::Download(format!("Failed to write file {}: {}", dest.display(), e))
+    })?;
+
+    // Validate file was written correctly
+    let written_size = std::fs::metadata(dest).map(|m| m.len()).unwrap_or(0);
+
+    if written_size != text.len() as u64 {
+        return Err(CrashError::Download(format!(
+            "File size mismatch: expected {}, got {}",
+            text.len(),
+            written_size
+        )));
+    }
+
+    log_info!("Download completed successfully: {}", url);
+    Ok(())
+}
+
+/// Single text download attempt
+async fn download_text_attempt(url: &str) -> Result<String> {
     log_debug!("Sending HTTP GET request to {}", url);
 
     let response = new_client()
@@ -84,33 +118,11 @@ async fn download_attempt(url: &str, dest: &Path) -> Result<()> {
         )));
     }
 
-    log_debug!("Reading response body");
-    let bytes = response
-        .bytes()
+    log_debug!("Reading response body as text");
+    let text = response
+        .text()
         .await
         .map_err(|e| CrashError::Download(format!("Failed to read response body: {}", e)))?;
 
-    log_debug!("Writing {} bytes to {}", bytes.len(), dest.display());
-
-    // Ensure parent directory exists
-    if let Some(parent) = dest.parent() {
-        crate::utils::fs::ensure_dir(parent)?;
-    }
-
-    std::fs::write(dest, &bytes).map_err(|e| {
-        CrashError::Download(format!("Failed to write file {}: {}", dest.display(), e))
-    })?;
-
-    // Validate file was written correctly
-    let written_size = std::fs::metadata(dest).map(|m| m.len()).unwrap_or(0);
-
-    if written_size != bytes.len() as u64 {
-        return Err(CrashError::Download(format!(
-            "File size mismatch: expected {}, got {}",
-            bytes.len(),
-            written_size
-        )));
-    }
-
-    Ok(())
+    Ok(text)
 }

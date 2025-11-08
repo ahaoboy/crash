@@ -1,30 +1,65 @@
 // Updater component for configuration and geo databases
 
 use crate::config::CrashConfig;
-use crate::download::download_file;
-use crate::error::Result;
+use crate::download::{download_file, download_text};
+use crate::error::{CrashError, Result};
 use crate::utils::fs::file_exists;
 use crate::{log_info, log_warn};
+use std::path::Path;
 
-/// Update configuration file from URL
+/// Check if a string is a valid URL
+fn is_url(s: &str) -> bool {
+    s.starts_with("http://") || s.starts_with("https://")
+}
+
+/// Update configuration file from URL or local file
 pub async fn update_config(force: bool) -> Result<()> {
     let config = CrashConfig::load()?;
     let dest = &config.config_path();
-    let url = &config.url;
+    let source = &config.url;
+
     if file_exists(dest) && !force {
         log_info!("Configuration file already exists at {}", dest.display());
         return Ok(());
     }
 
-    log_info!("Updating configuration from: {}", url);
+    log_info!("Updating configuration from: {}", source);
 
-    download_file(url, dest).await?;
+    // Get configuration content from URL or local file
+    let content = if is_url(source) {
+        // Download from URL
+        log_info!("Downloading configuration from URL: {}", source);
+        download_text(source).await.map_err(|e| {
+            CrashError::Config(format!("Failed to download configuration from URL: {}", e))
+        })?
+    } else {
+        // Read from local file
+        let source_path = Path::new(source);
+        if !source_path.exists() {
+            return Err(CrashError::Config(format!(
+                "Configuration source not found: {} (not a valid URL or local file)",
+                source
+            )));
+        }
 
-    let s = std::fs::read_to_string(dest)?;
-    let patch_s = config.patch_config(&s);
-    if s != patch_s {
-        std::fs::write(dest, patch_s)?;
-    }
+        log_info!("Reading configuration from local file: {}", source);
+        std::fs::read_to_string(source_path).map_err(|e| {
+            CrashError::Config(format!("Failed to read local configuration file: {}", e))
+        })?
+    };
+
+    // Apply patches to configuration
+    let patched_content = config.patch_config(&content);
+
+    // Write to destination
+    std::fs::write(dest, patched_content).map_err(|e| {
+        CrashError::Config(format!(
+            "Failed to write configuration to {}: {}",
+            dest.display(),
+            e
+        ))
+    })?;
+
     log_info!("Configuration updated successfully");
     Ok(())
 }
