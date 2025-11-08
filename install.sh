@@ -9,6 +9,15 @@
 #   Set EI_DIR environment variable to specify installation directory
 #   Example: export EI_DIR=~/.local/bin
 #
+#   Set EI_TYPE to specify resource type (default: release)
+#   - "release": Download from GitHub releases (default)
+#   - "file": Download from GitHub raw files
+#   Example: export EI_TYPE=file
+#
+#   Set EI_REF to specify reference for file type (default: main)
+#   Used only when EI_TYPE=file
+#   Example: export EI_REF=main
+#
 # Usage:
 #   bash install.sh [OPTIONS]
 #
@@ -36,6 +45,10 @@ EI_REPO="crash"
 EI_TAG="latest"
 EI_BINARY_NAME="crash"
 EI_DIR="~/.crash"  # Installation directory (empty = auto-detect based on permissions)
+
+# Reference for file type (branch/tag/commit), used only when EI_TYPE="file"
+# Examples: "main", "master", "v1.0.0", "abc123"
+EI_REF="${EI_REF:-main}"
 
 # ============================================================================
 # DEFAULTS - These can be overridden by command-line arguments
@@ -300,11 +313,20 @@ Options:
 
   --help            Display this help message
 
+Environment Variables:
+  EI_DIR        Installation directory (default: ~/.ei)
+  EI_TYPE       Resource type: "release" or "file" (default: release)
+  EI_REF        Reference for file type (default: main)
+                Used only when EI_TYPE=file
+
 Examples:
   bash install.sh
   bash install.sh --proxy xget
   bash install.sh --target aarch64-unknown-linux-musl
   bash install.sh --proxy jsdelivr --tag v1.0.0
+  EI_DIR=~/.local/bin bash install.sh
+  EI_TYPE=file EI_REF=main bash install.sh
+  EI_TYPE=file EI_REF=v1.0.0 bash install.sh --proxy jsdelivr
 
 Supported Platforms (Rust target triples):
   x86_64-unknown-linux-musl, x86_64-unknown-linux-gnu
@@ -447,17 +469,17 @@ check_dependencies() {
       if ! command_exists tar; then
         missing_deps="${missing_deps} tar"
       fi
-      if ! command_exists gzip; then
-        missing_deps="${missing_deps} gzip"
-      fi
+      # if ! command_exists gzip; then
+      #   missing_deps="${missing_deps} gzip"
+      # fi
       ;;
     tar.xz)
       if ! command_exists tar; then
         missing_deps="${missing_deps} tar"
       fi
-      if ! command_exists xz; then
-        missing_deps="${missing_deps} xz"
-      fi
+      # if ! command_exists xz; then
+      #   missing_deps="${missing_deps} xz"
+      # fi
       ;;
     zip)
       if ! command_exists unzip; then
@@ -477,65 +499,95 @@ check_dependencies() {
 # DOWNLOAD FUNCTIONS
 # ============================================================================
 
-# Generate download URL based on proxy type
-# Args: proxy, owner, repo, tag, filename
+# Generate download URL based on resource type and proxy type
+# Args: proxy, owner, repo, tag_or_ref, filename, resource_type
 # Returns: download URL
 generate_download_url() {
   local proxy="$1"
   local owner="$2"
   local repo="$3"
-  local tag="$4"
+  local tag_or_ref="$4"
   local filename="$5"
-  local github_url
+  local resource_type="${6:-release}"  # Default to "release" if not specified
 
   local github_host="github.com"
-  # Build base GitHub URL
-  if [ "$tag" = "latest" ]; then
-    github_url="https://${github_host}/${owner}/${repo}/releases/latest/download/${filename}"
+
+  local url=""
+
+  # Generate URL based on resource type
+  if [ "$resource_type" = "file" ]; then
+    # GitHub raw file format
+    case "$proxy" in
+      github)
+        url="https://${github_host}/${owner}/${repo}/raw/${tag_or_ref}/${filename}"
+        ;;
+      xget)
+        url="https://xget.xi-xu.me/gh/${owner}/${repo}/raw/${tag_or_ref}/${filename}"
+        ;;
+      gh-proxy)
+        url="https://gh-proxy.com/https://${github_host}/${owner}/${repo}/raw/${tag_or_ref}/${filename}"
+        ;;
+      jsdelivr)
+        url="https://cdn.jsdelivr.net/gh/${owner}/${repo}@${tag_or_ref}/${filename}"
+        ;;
+      statically)
+        url="https://cdn.statically.io/gh/${owner}/${repo}/${tag_or_ref}/${filename}"
+        ;;
+      *)
+        echo "ERROR: Unknown proxy type: $proxy" >&2
+        echo "Supported proxies: github, gh-proxy, xget, jsdelivr, statically" >&2
+        exit 1
+        ;;
+    esac
+  elif [ "$resource_type" = "release" ]; then
+    # GitHub release format
+    case "$proxy" in
+      github)
+        if [ "$tag_or_ref" = "latest" ]; then
+          url="https://${github_host}/${owner}/${repo}/releases/latest/download/${filename}"
+        else
+          url="https://${github_host}/${owner}/${repo}/releases/download/${tag_or_ref}/${filename}"
+        fi
+        ;;
+      xget)
+        if [ "$tag_or_ref" = "latest" ]; then
+          url="https://xget.xi-xu.me/gh/${owner}/${repo}/releases/latest/download/${filename}"
+        else
+          url="https://xget.xi-xu.me/gh/${owner}/${repo}/releases/download/${tag_or_ref}/${filename}"
+        fi
+        ;;
+      gh-proxy)
+        if [ "$tag_or_ref" = "latest" ]; then
+          url="https://gh-proxy.com/https://${github_host}/${owner}/${repo}/releases/latest/download/${filename}"
+        else
+          url="https://gh-proxy.com/https://${github_host}/${owner}/${repo}/releases/download/${tag_or_ref}/${filename}"
+        fi
+        ;;
+      jsdelivr)
+        # jsdelivr doesn't support release assets from /releases/download/
+        echo "ERROR: jsdelivr proxy does not support GitHub release assets" >&2
+        echo "Please use a different proxy (github, gh-proxy, xget) or use EI_TYPE=file" >&2
+        exit 1
+        ;;
+      statically)
+        # statically doesn't support release assets from /releases/download/
+        echo "ERROR: statically proxy does not support GitHub release assets" >&2
+        echo "Please use a different proxy (github, gh-proxy, xget) or use EI_TYPE=file" >&2
+        exit 1
+        ;;
+      *)
+        echo "ERROR: Unknown proxy type: $proxy" >&2
+        echo "Supported proxies: github, gh-proxy, xget, jsdelivr, statically" >&2
+        exit 1
+        ;;
+    esac
   else
-    github_url="https://${github_host}/${owner}/${repo}/releases/download/${tag}/${filename}"
+    echo "ERROR: Unknown resource type: $resource_type" >&2
+    echo "Supported types: release, file" >&2
+    exit 1
   fi
 
-  # echo $proxy $owner $repo $tag $filename
-  # echo $github_url
-
-  # Apply proxy transformation
-  case "$proxy" in
-    github)
-      echo "$github_url"
-      ;;
-    gh-proxy)
-      echo "https://gh-proxy.com/${github_url}"
-      ;;
-    xget)
-      if [ "$tag" = "latest" ]; then
-        echo "https://xget.xi-xu.me/gh/${owner}/${repo}/releases/latest/download/${filename}"
-      else
-        echo "https://xget.xi-xu.me/gh/${owner}/${repo}/releases/download/${tag}/${filename}"
-      fi
-      ;;
-    jsdelivr)
-      # jsdelivr CDN format
-      if [ "$tag" = "latest" ]; then
-        echo "https://cdn.jsdelivr.net/gh/${owner}/${repo}/releases/latest/download/${filename}"
-      else
-        echo "https://cdn.jsdelivr.net/gh/${owner}/${repo}@${tag}/${filename}"
-      fi
-      ;;
-    statically)
-      # statically CDN format
-      if [ "$tag" = "latest" ]; then
-        echo "https://cdn.statically.io/gh/${owner}/${repo}/releases/latest/download/${filename}"
-      else
-        echo "https://cdn.statically.io/gh/${owner}/${repo}/${tag}/${filename}"
-      fi
-      ;;
-    *)
-      echo "ERROR: Unknown proxy type: $proxy" >&2
-      echo "Supported proxies: github, gh-proxy, xget, jsdelivr, statically" >&2
-      exit 1
-      ;;
-  esac
+  echo "$url"
 }
 
 # Download file from URL
@@ -581,6 +633,23 @@ extract_archive() {
       exit 1
       ;;
   esac
+}
+
+# ============================================================================
+# CLEANUP FUNCTIONS
+# ============================================================================
+
+# Safely cleanup temporary files
+# Args: file_path1 [file_path2 ...]
+# Only removes files, not directories, to prevent accidental data loss
+cleanup_temp_files() {
+  local file_path
+  for file_path in "$@"; do
+    if [ -f "$file_path" ]; then
+      echo "Cleaning up temporary file: $file_path"
+      rm -f "$file_path"
+    fi
+  done
 }
 
 # ============================================================================
@@ -761,7 +830,7 @@ main() {
   echo "Installation directory: $abs_path" $EI_DIR
 
   # Create temporary download directory
-  if command -v mktemp >/dev/null 2>&1; then
+  if command_exists mktemp; then
     DOWNLOAD_DIR="$(mktemp -d)"
   else
     DOWNLOAD_DIR="."
@@ -769,8 +838,17 @@ main() {
 
   DOWNLOAD_PATH="$DOWNLOAD_DIR/$FILENAME"
 
+  # Determine tag or reference based on resource type
+  if [ "$EI_TYPE" = "file" ]; then
+    TAG_OR_REF="$EI_REF"
+    echo "Resource type: file (reference: $TAG_OR_REF)"
+  else
+    TAG_OR_REF="$EI_TAG"
+    echo "Resource type: release (tag: $TAG_OR_REF)"
+  fi
+
   # Generate download URL
-  DOWNLOAD_URL="$(generate_download_url "$PROXY" "$EI_OWNER" "$EI_REPO" "$EI_TAG" "$FILENAME")"
+  DOWNLOAD_URL="$(generate_download_url "$PROXY" "$EI_OWNER" "$EI_REPO" "$TAG_OR_REF" "$FILENAME" "$EI_TYPE")"
 
   # Download file
   if ! download_file "$DOWNLOAD_URL" "$DOWNLOAD_PATH" "$PROXY"; then
@@ -855,6 +933,9 @@ main() {
     update_path_unix "$EI_DIR"
     add_to_github_path "$abs_path"
   fi
+
+  cleanup_temp_files "$DOWNLOAD_PATH"
+  echo "Cleanup complete"
 }
 
 main "$@"

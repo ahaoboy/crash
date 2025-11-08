@@ -6,7 +6,7 @@ use crate::platform::command::execute;
 use crate::platform::process::get_pid;
 use crate::process::{restart, start, stop};
 use crate::utils::fs::{atomic_write, ensure_dir};
-use crate::utils::{current_timestamp, file_exists, get_dir_size};
+use crate::utils::{current_timestamp, file_exists, get_dir_size, strip_suffix};
 use crate::{log_debug, log_info};
 use github_proxy::{Proxy, Resource};
 use guess_target::Target;
@@ -422,7 +422,7 @@ impl CrashConfig {
                 continue;
             };
 
-            let db_path = self.config_dir.join(name.replace(".tar.xz", ""));
+            let db_path = self.config_dir.join(strip_suffix(name));
 
             if file_exists(&db_path) && !force {
                 log_info!("Database {} already exists", name);

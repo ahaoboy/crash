@@ -102,3 +102,17 @@ pub fn format_size(n: u64) -> String {
         },
     )
 }
+
+const SUFFIXES: [&str; 8] = [
+    ".tar.gz", ".tar.xz", ".tar.bz2", ".zip", ".gz", ".xz", ".bz2", ".tgz",
+];
+
+pub fn strip_suffix(name: &str) -> &str {
+    for suffix in SUFFIXES {
+        if let Some(stripped) = name.strip_suffix(suffix) {
+            return stripped;
+        }
+    }
+
+    name
+}
