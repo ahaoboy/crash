@@ -71,7 +71,7 @@ impl Core {
                 "mihomo-windows-amd64-v1.19.15.tar.gz"
             }
             (Mihomo, Target::Aarch64UnknownLinuxMusl) => "mihomo-linux-arm64-v1.19.15.tar.gz",
-            (Mihomo, Target::X86_64UnknownLinuxGnu) => "mihomo-linux-amd64-v1.19.15.tar.gz",
+            (Mihomo, Target::X86_64UnknownLinuxGnu | Target::X86_64UnknownLinuxMusl) => "mihomo-linux-amd64-v1.19.15.tar.gz",
             (Mihomo, Target::Aarch64AppleDarwin) => "mihomo-darwin-arm64-v1.19.15.tar.gz",
             (Mihomo, Target::X86_64AppleDarwin) => "mihomo-darwin-amd64-v1.19.15.tar.gz",
 
