@@ -60,23 +60,23 @@ impl WebConfig {
     fn ui_release_file_name(&self) -> String {
         use UiType::*;
         match self.ui {
-            Yacd => "yacd.tar.xz".to_string(),
-            Zashboard => "zashboard.zip".to_string(),
-            Metacubexd => "metacubexd.tgz".to_string(),
+            Yacd => "yacd.tar.gz".to_string(),
+            Zashboard => "zashboard.tar.gz".to_string(),
+            Metacubexd => "metacubexd.tar.gz".to_string(),
         }
     }
 
     /// Get the download URL for the UI
-    pub fn ui_url(&self, proxy: &Proxy) -> crate::error::Result<String> {
-        proxy
-            .url(Resource::Release {
-                owner: "ahaoboy".to_string(),
-                repo: "crash-assets".to_string(),
-                tag: "nightly".to_string(),
-                name: self.ui_release_file_name(),
-            })
-            .ok_or_else(|| {
-                crate::error::CrashError::Download("Failed to get UI download URL".to_string())
-            })
+    pub fn ui_url(&self) -> crate::error::Result<String> {
+        Resource::File {
+            owner: "ahaoboy".to_string(),
+            repo: "crash-assets".to_string(),
+            reference: "main".to_string(),
+            path: self.ui_release_file_name(),
+        }
+        .url(&Proxy::Github)
+        .ok_or_else(|| {
+            crate::error::CrashError::Download("Failed to get UI download URL".to_string())
+        })
     }
 }

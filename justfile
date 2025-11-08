@@ -13,4 +13,4 @@ clippy:
   cargo clippy --fix --allow-dirty --allow-staged --all-targets
 fmt:
   cargo fmt
-lint: fmt clippy
+check: fmt clippy

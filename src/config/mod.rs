@@ -384,7 +384,7 @@ impl CrashConfig {
         log_info!("Installing web UI: {}", self.web.ui_name());
 
         // Get download URL
-        let url = self.web.ui_url(&self.proxy)?;
+        let url = self.web.ui_url()?;
 
         log_info!("Downloading UI from: {}", url);
 
@@ -411,13 +411,13 @@ impl CrashConfig {
         log_info!("Installing GeoIP databases");
 
         for name in self.core.get_geo_files() {
-            let Some(url) = Resource::Release {
+            let Some(url) = Resource::File {
                 owner: "ahaoboy".to_string(),
                 repo: "crash-assets".to_string(),
-                tag: "nightly".to_string(),
-                name: name.to_string(),
+                reference: "main".to_string(),
+                path: name.to_string(),
             }
-            .url(&self.proxy) else {
+            .url(&Proxy::Github) else {
                 log_info!("Database {} not found.", name);
                 continue;
             };
