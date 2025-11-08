@@ -1,8 +1,8 @@
 // Command handler implementations
 
 use crate::cli::Commands;
-use crate::config::CrashConfig;
 use crate::config::core::Core;
+use crate::config::{CrashConfig, get_config_path};
 use crate::core::updater::{update_config, update_geo};
 use crate::error::CrashError;
 use crate::log_info;
@@ -18,7 +18,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::Install { force }) => handle_install(force).await,
         Some(Commands::Proxy { proxy }) => handle_proxy(proxy),
         Some(Commands::Start { force }) => handle_start(force),
-        Some(Commands::Stop) => handle_stop(),
+        Some(Commands::Stop { force }) => handle_stop(force),
         Some(Commands::Status) => handle_status(),
         Some(Commands::Core { core }) => handle_core(core),
         Some(Commands::Task) => handle_task(),
@@ -28,6 +28,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::UpdateUrl { force }) => handle_update_url(force).await,
         Some(Commands::UpdateGeo { force }) => handle_update_geo(force).await,
         Some(Commands::Update) => handle_update().await,
+        Some(Commands::Config) => handle_config(),
         Some(Commands::Ui { ui }) => handle_ui(ui),
         Some(Commands::Host { host }) => handle_host(host),
         Some(Commands::Secret { secret }) => handle_secret(secret),
@@ -91,22 +92,12 @@ fn handle_start(force: bool) -> Result<()> {
 }
 
 /// Handle stop command
-fn handle_stop() -> Result<()> {
-    log_info!("Executing stop command");
+fn handle_stop(force: bool) -> Result<()> {
+    log_info!("Executing stop command force: {}", force);
 
-    CrashConfig::load()?.stop()?;
+    CrashConfig::load()?.stop(force)?;
 
     println!("Proxy service stopped successfully!");
-    Ok(())
-}
-
-/// Handle restart command
-fn handle_restart() -> Result<()> {
-    log_info!("Executing restart command");
-
-    CrashConfig::load()?.restart()?;
-
-    println!("Proxy service restarted successfully!");
     Ok(())
 }
 
@@ -288,8 +279,7 @@ async fn handle_run_task() -> Result<()> {
     // Update geo databases
     handle_update_geo(true).await?;
 
-    // Restart service
-    handle_restart()?;
+    handle_start(true)?;
 
     println!("Scheduled task completed successfully!");
     Ok(())
@@ -411,5 +401,13 @@ async fn handle_upgrade() -> Result<()> {
     let config = CrashConfig::load()?;
     config.upgrade().await?;
 
+    Ok(())
+}
+
+fn handle_config() -> Result<()> {
+    log_info!("Executing config command");
+
+    let s = std::fs::read_to_string(get_config_path())?;
+    println!("{}", s);
     Ok(())
 }

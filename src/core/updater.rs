@@ -15,7 +15,7 @@ fn is_url(s: &str) -> bool {
 /// Update configuration file from URL or local file
 pub async fn update_config(force: bool) -> Result<()> {
     let config = CrashConfig::load()?;
-    let dest = &config.config_path();
+    let dest = &config.core_config_path();
     let source = &config.url;
 
     if file_exists(dest) && !force {

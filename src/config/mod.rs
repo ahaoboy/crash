@@ -4,7 +4,7 @@ use crate::config::core::Core;
 use crate::error::{CrashError, Result};
 use crate::platform::command::execute;
 use crate::platform::process::get_pid;
-use crate::process::{restart, start, stop};
+use crate::process::{start, stop};
 use crate::utils::fs::{atomic_write, ensure_dir};
 use crate::utils::{current_timestamp, file_exists, get_dir_size, strip_suffix};
 use crate::{log_debug, log_info};
@@ -37,6 +37,9 @@ pub struct CrashConfig {
     /// Maximum runtime in hours before automatic restart (0 = disabled)
     #[serde(default = "default_max_runtime_hours")]
     pub max_runtime_hours: u64,
+
+    #[serde(default)]
+    pub stop_force: bool,
 }
 
 fn default_max_runtime_hours() -> u64 {
@@ -54,6 +57,7 @@ impl Default for CrashConfig {
             target: Target::default(),
             web: WebConfig::default(),
             url: String::new(),
+            stop_force: false,
             max_runtime_hours: default_max_runtime_hours(),
         }
     }
@@ -126,12 +130,16 @@ impl CrashConfig {
     }
 
     /// Get the path to the core configuration file
-    pub fn config_path(&self) -> PathBuf {
+    pub fn core_config_path(&self) -> PathBuf {
         self.config_dir.join(self.core.config_file_name())
     }
 
     pub fn start(&mut self, force: bool) -> Result<()> {
         log_info!("Starting proxy core: {}", self.core.name());
+
+        if self.stop_force && !force {
+            return Ok(());
+        }
 
         let exe_path = self.core.exe_path(&self.config_dir);
 
@@ -157,15 +165,15 @@ impl CrashConfig {
                         runtime_seconds / 3600,
                         self.max_runtime_hours
                     );
-                    self.stop()?;
+                    self.stop(false)?;
                     // Continue to start the process below
                 } else if force {
-                    self.stop()?;
+                    self.stop(false)?;
                 } else {
                     return Ok(());
                 }
             } else if force {
-                self.stop()?;
+                self.stop(false)?;
             } else {
                 return Ok(());
             }
@@ -174,7 +182,7 @@ impl CrashConfig {
         let args = match self.core {
             Core::Mihomo | Core::Clash => vec![
                 "-f".to_string(),
-                self.config_path().to_string_lossy().to_string(),
+                self.core_config_path().to_string_lossy().to_string(),
                 "-ext-ctl".to_string(),
                 self.web.host.clone(),
                 "-ext-ui".to_string(),
@@ -186,7 +194,7 @@ impl CrashConfig {
                 vec![
                     "run".to_string(),
                     "-c".to_string(),
-                    self.config_path().to_string_lossy().to_string(),
+                    self.core_config_path().to_string_lossy().to_string(),
                     "-D".to_string(),
                     self.config_dir.to_string_lossy().to_string(),
                 ]
@@ -203,11 +211,10 @@ impl CrashConfig {
     }
 
     /// Stop the proxy core
-    pub fn stop(&mut self) -> Result<()> {
-        let _config = CrashConfig::load()?;
-
+    pub fn stop(&mut self, force: bool) -> Result<()> {
         log_info!("Stopping proxy core: {}", self.core.name());
 
+        self.stop_force = force;
         let exe_name = self.core.exe_name();
         stop(&exe_name)?;
 
@@ -215,35 +222,6 @@ impl CrashConfig {
         self.save()?;
 
         log_info!("Proxy core stopped successfully");
-        Ok(())
-    }
-
-    /// Restart the proxy core
-    pub fn restart(&mut self) -> Result<()> {
-        log_info!("Restarting proxy core");
-
-        let exe_name = self.core.exe_name();
-        let exe_path = self.core.exe_path(&self.config_dir);
-
-        let args = vec![
-            "-f".to_string(),
-            self.config_path().to_string_lossy().to_string(),
-            "-ext-ctl".to_string(),
-            self.web.host.clone(),
-            "-ext-ui".to_string(),
-            self.web.ui_name().to_string(),
-            "-d".to_string(),
-            self.config_dir.to_string_lossy().to_string(),
-        ];
-
-        restart(&exe_name, &exe_path, args, self.core.envs())?;
-
-        let _config = CrashConfig::load()?;
-
-        self.start_time = current_timestamp();
-        self.save()?;
-
-        log_info!("Proxy core restarted successfully");
         Ok(())
     }
 
@@ -294,7 +272,7 @@ impl CrashConfig {
 
     /// Ensure default configuration file exists
     fn ensure_default_config(&self) -> Result<()> {
-        let config_path = self.config_path();
+        let config_path = self.core_config_path();
 
         if config_path.exists() {
             return Ok(());

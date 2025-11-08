@@ -40,7 +40,10 @@ pub enum Commands {
     },
 
     /// Stop the proxy service
-    Stop,
+    Stop {
+        #[arg(short, long, default_value_t = false)]
+        force: bool,
+    },
 
     Core {
         core: Core,
@@ -79,6 +82,8 @@ pub enum Commands {
 
     /// Update configuration from stored URL
     Update,
+
+    Config,
 
     /// Set the web UI type
     Ui {
