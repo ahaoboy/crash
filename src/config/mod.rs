@@ -138,10 +138,15 @@ impl CrashConfig {
     pub fn start(&mut self, force: bool) -> Result<()> {
         log_info!("Starting proxy core: {}", self.core.name());
 
-        if self.stop_force && !force {
-            return Err(CrashError::Process(
-                "Skip starting proxy core: run 'crash start -f' instead.".to_string(),
-            ));
+        if self.stop_force {
+            if !force {
+                return Err(CrashError::Process(
+                    "Skip starting proxy core: run 'crash start -f' instead.".to_string(),
+                ));
+            } else {
+                self.stop_force = false;
+                self.save()?;
+            }
         }
 
         let exe_path = self.core.exe_path(&self.config_dir);
