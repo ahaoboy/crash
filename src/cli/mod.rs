@@ -104,6 +104,9 @@ pub enum Commands {
         hours: u64,
     },
 
+    /// Upgrade crash to the latest version
+    Upgrade,
+
     #[command(trailing_var_arg = true, allow_hyphen_values = true)]
     Ei {
         args: Vec<String>,

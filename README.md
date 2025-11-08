@@ -169,6 +169,22 @@ crash proxy xget        # xget mirror
 crash proxy jsdelivr    # jsdelivr CDN
 ```
 
+### Self-Upgrade
+
+```bash
+crash upgrade
+```
+
+### Maximum Runtime
+
+```bash
+# Set maximum runtime before automatic restart (default: 12 hours)
+crash max-runtime 24
+
+# Disable automatic restart (run indefinitely)
+crash max-runtime 0
+```
+
 ### ei
 
 ```bash

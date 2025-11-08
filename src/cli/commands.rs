@@ -32,6 +32,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::Host { host }) => handle_host(host),
         Some(Commands::Secret { secret }) => handle_secret(secret),
         Some(Commands::MaxRuntime { hours }) => handle_max_runtime(hours),
+        Some(Commands::Upgrade) => handle_upgrade().await,
         Some(Commands::Ei { args }) => handle_ei(args).await,
         None => handle_status(),
     }
@@ -401,5 +402,14 @@ fn handle_max_runtime(hours: u64) -> Result<()> {
             hours
         );
     }
+    Ok(())
+}
+
+async fn handle_upgrade() -> Result<()> {
+    log_info!("Executing upgrade command");
+
+    let config = CrashConfig::load()?;
+    config.upgrade().await?;
+
     Ok(())
 }

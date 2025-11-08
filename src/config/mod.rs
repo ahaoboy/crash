@@ -529,6 +529,22 @@ tun:
     pub fn get_size(&self) -> u64 {
         get_dir_size(&self.config_dir)
     }
+
+    pub async fn upgrade(&self) -> Result<()> {
+        let exe = std::env::current_exe()?;
+        let dir = exe
+            .parent()
+            .ok_or_else(|| CrashError::Download("crash repo not found".to_string()))?;
+        self.ei(
+            "ahaoboy/crash",
+            &dir.to_string_lossy(),
+            Some("crash".to_string()),
+        )
+        .await
+        .map_err(|e| CrashError::Download(e.to_string()))?;
+
+        Ok(())
+    }
 }
 
 pub fn get_config_dir() -> PathBuf {
