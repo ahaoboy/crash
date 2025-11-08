@@ -25,13 +25,15 @@ guess-target = { version = "0.1", git = "https://github.com/ahaoboy/guess-target
 github-proxy = { version = "0.1", git = "https://github.com/ahaoboy/github-proxy", features = [
   "serde",
 ] }
-easy-install = { version = "1", git = "https://github.com/easy-install/easy-install" }
+easy-install = { version = "1", git = "https://github.com/easy-install/easy-install", default-features = false, features = [
+  "tar-gz",
+] }
 strum = { version = "0.27", features = ["derive"] }
 strum_macros = "0.27"
 local-ip-address = "0.6"
 anyhow = "1"
 humansize = "2"
-humantime= "2"
+humantime = "2"
 which = "8"
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
