@@ -1,5 +1,6 @@
 // Logging infrastructure for the Crash application
 
+use crate::config::get_log_dir;
 use crate::error::{CrashError, Result};
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
@@ -45,9 +46,9 @@ pub struct LogConfig {
 impl Default for LogConfig {
     fn default() -> Self {
         Self {
-            log_dir: PathBuf::from(".crash_config/logs"),
+            log_dir: get_log_dir(),
             log_level: LogLevel::Info,
-            max_file_size: 10 * 1024 * 1024, // 10MB
+            max_file_size: 1024 * 1024, // 1MB
             max_files: 5,
         }
     }

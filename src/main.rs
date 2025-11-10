@@ -7,7 +7,7 @@ use anyhow::Result;
 use clap::Parser;
 use crash::cli::Cli;
 use crash::cli::commands::handle;
-use crash::log::{LogConfig, LogLevel, init_logger};
+use crash::log::{LogConfig, init_logger};
 use crash::{log_error, log_info};
 
 #[tokio::main]
@@ -32,14 +32,7 @@ async fn main() {
 
 /// Initialize the logging system
 fn init_logging() -> Result<()> {
-    let log_dir = crash::config::get_log_dir();
-
-    let config = LogConfig {
-        log_dir,
-        log_level: LogLevel::Info,
-        max_file_size: 10 * 1024 * 1024, // 10MB
-        max_files: 5,
-    };
+    let config = LogConfig::default();
 
     init_logger(config)?;
     Ok(())
