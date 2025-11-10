@@ -40,7 +40,6 @@ pub struct LogConfig {
     pub log_dir: PathBuf,
     pub log_level: LogLevel,
     pub max_file_size: u64,
-    pub max_files: usize,
 }
 
 impl Default for LogConfig {
@@ -49,7 +48,6 @@ impl Default for LogConfig {
             log_dir: get_log_dir(),
             log_level: LogLevel::Info,
             max_file_size: 1024 * 1024, // 1MB
-            max_files: 5,
         }
     }
 }
@@ -62,11 +60,7 @@ pub struct Logger {
 
 impl Logger {
     fn new(config: LogConfig) -> Result<Self> {
-        let appender = FileAppender::new(
-            config.log_dir.clone(),
-            config.max_file_size,
-            config.max_files,
-        )?;
+        let appender = FileAppender::new(config.log_dir.clone(), config.max_file_size)?;
 
         Ok(Self {
             config,
