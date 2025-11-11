@@ -1,3 +1,4 @@
+use crate::config::get_log_dir;
 // File appender with log trimming support
 use crate::error::{CrashError, Result};
 use crate::log::LogLevel;
@@ -59,6 +60,8 @@ impl FileAppender {
     pub fn write_log(&mut self, _level: LogLevel, message: &str) -> Result<()> {
         let message_bytes = message.as_bytes();
         let message_len = message_bytes.len() as u64 + 1; // +1 for newline
+
+        ensure_dir(&get_log_dir())?;
 
         if self.current_size + message_len > self.max_file_size {
             // Close current file if open

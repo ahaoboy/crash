@@ -9,7 +9,7 @@ pub mod output;
 // pub use output::OutputFormatter;
 
 /// Main CLI structure
-#[derive(Parser)]
+#[derive(Parser, Clone, Debug)]
 #[command(name = "crash", version)]
 #[command(about = "A tool for managing proxy cores like Clash/Mihomo/SingBox", long_about = None)]
 pub struct Cli {
@@ -18,7 +18,7 @@ pub struct Cli {
 }
 
 /// Available CLI commands
-#[derive(Subcommand)]
+#[derive(Subcommand, Clone, Debug)]
 pub enum Commands {
     /// Install proxy core and UI components
     Install {
