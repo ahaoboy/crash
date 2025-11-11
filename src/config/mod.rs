@@ -28,7 +28,7 @@ const APP_LOG_DIR: &str = "logs";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrashConfig {
     pub version: String,
-    pub config_dir: PathBuf,
+    // pub config_dir: PathBuf,
     pub start_time: u64,
     pub core: Core,
     pub proxy: Proxy,
@@ -51,7 +51,7 @@ impl Default for CrashConfig {
     fn default() -> Self {
         Self {
             version: env!("CARGO_PKG_VERSION").to_string(),
-            config_dir: get_config_dir(),
+            // config_dir: get_config_dir(),
             start_time: 0,
             core: Core::default(),
             proxy: Proxy::default(),
@@ -100,7 +100,7 @@ impl CrashConfig {
         log_info!("Saving configuration to {}", config_path.display());
 
         // Ensure config directory exists
-        ensure_dir(&self.config_dir)?;
+        ensure_dir(&get_config_dir())?;
 
         let json = serde_json::to_string_pretty(self)
             .map_err(|e| CrashError::Config(format!("Failed to serialize config: {}", e)))?;
@@ -113,7 +113,7 @@ impl CrashConfig {
     /// Validate configuration values
     pub fn validate(&self) -> Result<()> {
         // Validate config directory path
-        if self.config_dir.to_str().is_none() {
+        if get_config_dir().to_str().is_none() {
             return Err(CrashError::Config(
                 "Config directory path contains invalid UTF-8".to_string(),
             ));
@@ -132,7 +132,7 @@ impl CrashConfig {
 
     /// Get the path to the core configuration file
     pub fn core_config_path(&self) -> PathBuf {
-        self.config_dir.join(self.core.config_file_name())
+        get_config_dir().join(self.core.config_file_name())
     }
 
     pub fn start(&mut self, force: bool) -> Result<()> {
@@ -149,7 +149,7 @@ impl CrashConfig {
             }
         }
 
-        let exe_path = self.core.exe_path(&self.config_dir);
+        let exe_path = self.core.exe_path(&get_config_dir());
 
         if !exe_path.exists() {
             return Err(CrashError::Process(format!(
@@ -196,7 +196,7 @@ impl CrashConfig {
                 "-ext-ui".to_string(),
                 self.web.ui_name().to_string(),
                 "-d".to_string(),
-                self.config_dir.to_string_lossy().to_string(),
+                get_config_dir().to_string_lossy().to_string(),
             ],
             Core::Singbox => {
                 vec![
@@ -204,7 +204,7 @@ impl CrashConfig {
                     "-c".to_string(),
                     self.core_config_path().to_string_lossy().to_string(),
                     "-D".to_string(),
-                    self.config_dir.to_string_lossy().to_string(),
+                    get_config_dir().to_string_lossy().to_string(),
                 ]
             }
         };
@@ -237,7 +237,7 @@ impl CrashConfig {
     pub fn get_version(&self) -> Result<String> {
         log_debug!("Getting version for core: {}", self.core.name());
 
-        let exe_path = self.core.exe_path(&self.config_dir);
+        let exe_path = self.core.exe_path(&get_config_dir());
 
         if !exe_path.exists() {
             log_debug!("Core executable not found: {}", exe_path.display());
@@ -299,7 +299,7 @@ impl CrashConfig {
         Ok(())
     }
     pub async fn install_core(&self, force: bool) -> Result<()> {
-        let exe_path = self.core.exe_path(&self.config_dir);
+        let exe_path = self.core.exe_path(&get_config_dir());
 
         if file_exists(&exe_path) && !force {
             log_info!("Core already installed at {}", exe_path.display());
@@ -309,7 +309,7 @@ impl CrashConfig {
         log_info!("Installing proxy core: {}", self.core.name());
 
         // Ensure config directory exists
-        ensure_dir(&self.config_dir)?;
+        ensure_dir(&get_config_dir())?;
 
         // Get download URL
         let resource = self.core.repo(&self.target)?;
@@ -324,7 +324,7 @@ impl CrashConfig {
         let result = self
             .ei(
                 &url,
-                &self.config_dir.to_string_lossy(),
+                &get_config_dir().to_string_lossy(),
                 Some(self.core.name().to_string()),
             )
             .await;
@@ -360,7 +360,7 @@ impl CrashConfig {
     }
     /// Install the web UI
     pub async fn install_ui(&self, force: bool) -> Result<()> {
-        let ui_dir = self.web.ui_dir(&self.config_dir);
+        let ui_dir = self.web.ui_dir(&get_config_dir());
 
         if ui_dir.exists() && !force {
             log_info!("UI already installed at {}", ui_dir.display());
@@ -408,7 +408,7 @@ impl CrashConfig {
                 continue;
             };
 
-            let db_path = self.config_dir.join(strip_suffix(name));
+            let db_path = get_config_dir().join(strip_suffix(name));
 
             if file_exists(&db_path) && !force {
                 log_info!("Database {} already exists", name);
@@ -418,7 +418,7 @@ impl CrashConfig {
             log_info!("Downloading GeoIP database: {}", name);
 
             if self
-                .ei(&url, &self.config_dir.to_string_lossy(), None)
+                .ei(&url, &get_config_dir().to_string_lossy(), None)
                 .await
                 .is_ok()
             {
@@ -513,7 +513,7 @@ tun:
     }
 
     pub fn get_size(&self) -> u64 {
-        get_dir_size(&self.config_dir)
+        get_dir_size(&get_config_dir())
     }
 
     pub async fn upgrade(&self) -> Result<()> {
@@ -608,7 +608,7 @@ tun:
         };
 
         for db_name in databases {
-            let db_path = self.config_dir.join(db_name);
+            let db_path = get_config_dir().join(db_name);
 
             if file_exists(&db_path) && !force {
                 log_info!("Database {} already exists, skipping", db_name);

@@ -1,6 +1,6 @@
 // Process monitoring and status tracking
 
-use crate::config::CrashConfig;
+use crate::config::{CrashConfig, get_config_dir};
 use crate::error::Result;
 use crate::utils::command::execute;
 use crate::utils::process::get_pid;
@@ -129,7 +129,8 @@ pub fn format_status(config: &CrashConfig) -> String {
         "config",
         format!(
             "{} ({})",
-            config.config_dir.to_string_lossy(),
+            // config.config_dir.to_string_lossy(),
+            get_config_dir().to_string_lossy(),
             format_size(config.get_size(),)
         ),
     ));
