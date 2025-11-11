@@ -352,7 +352,7 @@ impl CrashConfig {
             url: url.to_string(),
             dir: Some(dir.to_string()),
             install_only: true,
-            proxy: self.proxy,
+            proxy: Some(self.proxy),
             alias,
             ..Default::default()
         })
