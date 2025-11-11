@@ -70,20 +70,26 @@ impl Core {
             (Mihomo, Target::X86_64PcWindowsMsvc | Target::X86_64PcWindowsGnu) => {
                 "mihomo-windows-amd64-v1.19.15.tar.gz"
             }
-            (Mihomo, Target::Aarch64UnknownLinuxMusl) => "mihomo-linux-arm64-v1.19.15.tar.gz",
+            (Mihomo, Target::Aarch64UnknownLinuxMusl | Target::Aarch64UnknownLinuxGnu) => {
+                "mihomo-linux-arm64-v1.19.15.tar.gz"
+            }
             (Mihomo, Target::X86_64UnknownLinuxGnu | Target::X86_64UnknownLinuxMusl) => {
                 "mihomo-linux-amd64-v1.19.15.tar.gz"
             }
             (Mihomo, Target::Aarch64AppleDarwin) => "mihomo-darwin-arm64-v1.19.15.tar.gz",
             (Mihomo, Target::X86_64AppleDarwin) => "mihomo-darwin-amd64-v1.19.15.tar.gz",
 
-            (Clash, Target::Aarch64UnknownLinuxMusl) => "clash-linux-arm64.tar.gz",
+            (Clash, Target::Aarch64UnknownLinuxMusl | Target::Aarch64UnknownLinuxGnu) => {
+                "clash-linux-arm64.tar.gz"
+            }
             (Clash, Target::X86_64UnknownLinuxGnu) => "clash-linux-amd64.tar.gz",
 
             (Singbox, Target::X86_64PcWindowsMsvc | Target::X86_64PcWindowsGnu) => {
                 "sing-box-1.12.12-windows-amd64.tar.gz"
             }
-            (Singbox, Target::Aarch64UnknownLinuxMusl) => "sing-box-1.12.12-linux-arm64.tar.gz",
+            (Singbox, Target::Aarch64UnknownLinuxMusl | Target::Aarch64UnknownLinuxGnu) => {
+                "sing-box-1.12.12-linux-arm64.tar.gz"
+            }
             (Singbox, Target::X86_64UnknownLinuxGnu) => "sing-box-1.12.12-linux-amd64.tar.gz",
             _ => {
                 return Err(CrashError::Config(format!(
