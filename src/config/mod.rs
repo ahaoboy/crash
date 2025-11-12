@@ -588,7 +588,11 @@ tun:
         use github_proxy::Resource;
 
         let databases = match self.core {
-            Core::Mihomo => vec!["geoip.metadb", "geoip.dat", "geosite.dat"],
+            Core::Mihomo => vec![
+                "geoip.metadb",
+                // "geoip.dat",
+                //  "geosite.dat"
+            ],
             Core::Clash => vec![
                 "china_ip_list.txt",
                 "china_ipv6_list.txt",
