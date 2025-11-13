@@ -43,9 +43,6 @@ humansize = "2"
 humantime = "2"
 which = "8"
 
-[target.'cfg(not(target_os = "windows"))'.dependencies]
-openssl = { version = "0.10", features = ["vendored"] }
-
 [profile.release]
 debug = false
 lto = true
