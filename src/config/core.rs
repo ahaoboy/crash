@@ -118,8 +118,8 @@ impl Core {
         match self {
             Core::Mihomo | Core::Clash => vec![
                 "geoip.metadb.tar.gz",
-                "geoip.dat.tar.gz",
-                "geosite.dat.tar.gz",
+                // "geoip.dat.tar.gz",
+                // "geosite.dat.tar.gz",
             ],
             // Core::Clash => vec![
             //     "china_ip_list.txt",

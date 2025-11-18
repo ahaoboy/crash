@@ -8,7 +8,7 @@ use crate::utils::fs::{atomic_write, ensure_dir};
 use crate::utils::process::get_pid;
 use crate::utils::process::{start, stop};
 use crate::utils::{current_timestamp, file_exists, get_dir_size, is_url, strip_suffix};
-use crate::{log_debug, log_info, log_warn};
+use crate::{log_debug, log_info};
 use github_proxy::{Proxy, Resource};
 use guess_target::Target;
 use serde::{Deserialize, Serialize};
@@ -587,29 +587,7 @@ tun:
         use crate::config::core::Core;
         use github_proxy::Resource;
 
-        let databases = match self.core {
-            Core::Mihomo => vec![
-                "geoip.metadb",
-                // "geoip.dat",
-                //  "geosite.dat"
-            ],
-            Core::Clash => vec![
-                "china_ip_list.txt",
-                "china_ipv6_list.txt",
-                "cn_mini.mmdb",
-                "Country.mmdb",
-                "geoip_cn.db",
-                "geosite.dat",
-                "geosite_cn.db",
-                "mrs_geosite_cn.mrs",
-                "srs_geoip_cn.srs",
-                "srs_geosite_cn.srs",
-            ],
-            Core::Singbox => {
-                log_warn!("GeoIP database update not implemented for Singbox");
-                return Ok(());
-            }
-        };
+        let databases = self.core.get_geo_files();
 
         for db_name in databases {
             let db_path = get_config_dir().join(db_name);
