@@ -11,6 +11,7 @@ use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use clap_complete::{Shell, generate};
 use github_proxy::Proxy;
+use guess_target::Target;
 use std::io;
 use std::str::FromStr;
 
@@ -31,6 +32,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::Update) => handle_update().await,
         Some(Commands::Config) => handle_config(),
         Some(Commands::Ui { ui }) => handle_ui(ui),
+        Some(Commands::Target { target }) => handle_target(target),
         Some(Commands::Host { host }) => handle_host(host),
         Some(Commands::Secret { secret }) => handle_secret(secret),
         Some(Commands::MaxRuntime { hours }) => handle_max_runtime(hours),
@@ -348,6 +350,17 @@ fn handle_ui(ui: String) -> Result<()> {
     config.save()?;
 
     println!("Web UI set to: {}", ui);
+    Ok(())
+}
+
+fn handle_target(target: Target) -> Result<()> {
+    log_info!("Setting target to: {}", target);
+
+    let mut config = CrashConfig::load()?;
+    config.target = target;
+    config.save()?;
+
+    println!("target set to: {}", target);
     Ok(())
 }
 

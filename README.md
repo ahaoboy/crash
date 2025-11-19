@@ -175,6 +175,25 @@ crash proxy jsdelivr    # jsdelivr CDN
 crash upgrade
 ```
 
+### Target Platform Configuration
+
+Set the target platform for downloading proxy cores. Using musl targets is recommended for better compatibility across different Linux distributions:
+
+```bash
+# Recommended: Use musl for better compatibility
+crash target x86_64-unknown-linux-musl
+
+# Other common targets
+crash target aarch64-unknown-linux-musl    # ARM64 Linux (musl)
+crash target x86_64-unknown-linux-gnu      # x86_64 Linux (gnu)
+crash target aarch64-unknown-linux-gnu     # ARM64 Linux (gnu)
+crash target x86_64-pc-windows-msvc        # Windows x64
+crash target aarch64-apple-darwin          # macOS Apple Silicon
+crash target x86_64-apple-darwin           # macOS Intel
+```
+
+**Why musl?** musl-based binaries are statically linked and work across different Linux distributions without dependency issues, making them more portable than gnu-based builds.
+
 ### Shell Completions
 
 Generate shell completion scripts for auto-completion:

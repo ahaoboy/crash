@@ -3,6 +3,7 @@
 use clap::{Parser, Subcommand};
 use clap_complete::Shell;
 use github_proxy::Proxy;
+use guess_target::Target;
 
 use crate::config::core::Core;
 pub mod commands;
@@ -90,6 +91,10 @@ pub enum Commands {
     Ui {
         /// UI type (Metacubexd, Zashboard, Yacd)
         ui: String,
+    },
+
+    Target {
+        target: Target,
     },
 
     /// Set the web controller host

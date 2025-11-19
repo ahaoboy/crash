@@ -354,6 +354,7 @@ impl CrashConfig {
             install_only: true,
             proxy: Some(self.proxy),
             alias,
+            target: Some(self.target),
             ..Default::default()
         })
         .await
