@@ -361,7 +361,8 @@ impl CrashConfig {
     }
     /// Install the web UI
     pub async fn install_ui(&self, force: bool) -> Result<()> {
-        let ui_dir = self.web.ui_dir(&get_config_dir());
+        let config_dir = get_config_dir();
+        let ui_dir = self.web.ui_dir(&config_dir);
 
         if ui_dir.exists() && !force {
             log_info!("UI already installed at {}", ui_dir.display());
@@ -376,7 +377,13 @@ impl CrashConfig {
         log_info!("Downloading UI from: {}", url);
 
         // Use easy-install to download and extract
-        let result = self.ei(&url, &ui_dir.to_string_lossy(), None).await;
+        let result = self
+            .ei(
+                &url,
+                &(config_dir.to_string_lossy()),
+                Some(self.web.ui_name().to_string()),
+            )
+            .await;
 
         if result.is_err() {
             return Err(CrashError::Download("Failed to install UI".to_string()));
