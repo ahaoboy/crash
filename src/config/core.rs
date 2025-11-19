@@ -68,16 +68,16 @@ impl Core {
 
         let filename = match (self, target) {
             (Mihomo, Target::X86_64PcWindowsMsvc | Target::X86_64PcWindowsGnu) => {
-                "mihomo-windows-amd64-v1.19.15.tar.gz"
+                "mihomo-windows-amd64-v1.19.16.tar.gz"
             }
             (Mihomo, Target::Aarch64UnknownLinuxMusl | Target::Aarch64UnknownLinuxGnu) => {
-                "mihomo-linux-arm64-v1.19.15.tar.gz"
+                "mihomo-linux-arm64-v1.19.16.tar.gz"
             }
             (Mihomo, Target::X86_64UnknownLinuxGnu | Target::X86_64UnknownLinuxMusl) => {
-                "mihomo-linux-amd64-v1.19.15.tar.gz"
+                "mihomo-linux-amd64-v1.19.16.tar.gz"
             }
-            (Mihomo, Target::Aarch64AppleDarwin) => "mihomo-darwin-arm64-v1.19.15.tar.gz",
-            (Mihomo, Target::X86_64AppleDarwin) => "mihomo-darwin-amd64-v1.19.15.tar.gz",
+            (Mihomo, Target::Aarch64AppleDarwin) => "mihomo-darwin-arm64-v1.19.16.tar.gz",
+            (Mihomo, Target::X86_64AppleDarwin) => "mihomo-darwin-amd64-v1.19.16.tar.gz",
 
             (Clash, Target::Aarch64UnknownLinuxMusl | Target::Aarch64UnknownLinuxGnu) => {
                 "clash-linux-arm64.tar.gz"

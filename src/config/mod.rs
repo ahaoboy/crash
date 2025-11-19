@@ -348,7 +348,7 @@ impl CrashConfig {
     }
 
     pub async fn ei(&self, url: &str, dir: &str, alias: Option<String>) -> anyhow::Result<()> {
-        easy_install::run_main(easy_install::Args {
+        let args = easy_install::Args {
             url: url.to_string(),
             dir: Some(dir.to_string()),
             install_only: true,
@@ -356,8 +356,8 @@ impl CrashConfig {
             alias,
             target: Some(self.target),
             ..Default::default()
-        })
-        .await
+        };
+        easy_install::run_main(args).await
     }
     /// Install the web UI
     pub async fn install_ui(&self, force: bool) -> Result<()> {
