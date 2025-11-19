@@ -1,6 +1,7 @@
 // CLI module for command-line interface
 
 use clap::{Parser, Subcommand};
+use clap_complete::Shell;
 use github_proxy::Proxy;
 
 use crate::config::core::Core;
@@ -115,5 +116,11 @@ pub enum Commands {
     #[command(trailing_var_arg = true, allow_hyphen_values = true)]
     Ei {
         args: Vec<String>,
+    },
+
+    /// Generate shell completion scripts
+    Completions {
+        /// Shell type (bash, zsh, fish, powershell, elvish)
+        shell: Shell,
     },
 }

@@ -175,6 +175,29 @@ crash proxy jsdelivr    # jsdelivr CDN
 crash upgrade
 ```
 
+### Shell Completions
+
+Generate shell completion scripts for auto-completion:
+
+```bash
+# Bash - Add to your shell profile
+crash completions bash > ~/.local/share/bash-completion/completions/crash
+# Or source directly
+source <(crash completions bash)
+
+# Fish - Install to fish completions directory
+crash completions fish > ~/.config/fish/completions/crash.fish
+
+# Zsh
+crash completions zsh > "${fpath[1]}/_crash"
+
+# PowerShell
+crash completions powershell >> $PROFILE
+
+# Elvish
+crash completions elvish > ~/.config/elvish/lib/crash.elv
+```
+
 ### Maximum Runtime
 
 ```bash

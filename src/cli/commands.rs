@@ -1,6 +1,6 @@
 // Command handler implementations
 
-use crate::cli::Commands;
+use crate::cli::{Cli, Commands};
 use crate::config::core::Core;
 use crate::config::{CrashConfig, get_config_path};
 use crate::error::CrashError;
@@ -8,8 +8,10 @@ use crate::log_info;
 use crate::utils::command::execute;
 use crate::utils::monitor::format_status;
 use anyhow::Result;
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use clap_complete::{Shell, generate};
 use github_proxy::Proxy;
+use std::io;
 use std::str::FromStr;
 
 pub async fn handle(command: Option<Commands>) -> Result<()> {
@@ -34,6 +36,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::MaxRuntime { hours }) => handle_max_runtime(hours),
         Some(Commands::Upgrade) => handle_upgrade().await,
         Some(Commands::Ei { args }) => handle_ei(args).await,
+        Some(Commands::Completions { shell }) => handle_completions(shell),
         None => handle_status(),
     }
 }
@@ -409,5 +412,17 @@ fn handle_config() -> Result<()> {
 
     let s = std::fs::read_to_string(get_config_path())?;
     println!("{}", s);
+    Ok(())
+}
+
+/// Handle completions command
+fn handle_completions(shell: Shell) -> Result<()> {
+    log_info!("Generating completions for shell: {:?}", shell);
+
+    let mut cmd = Cli::command();
+    let bin_name = cmd.get_name().to_string();
+
+    generate(shell, &mut cmd, bin_name, &mut io::stdout());
+
     Ok(())
 }
