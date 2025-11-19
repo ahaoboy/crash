@@ -42,6 +42,7 @@ anyhow = "1"
 humansize = "2"
 humantime = "2"
 which = "8"
+fs4 = "0.13"
 
 [profile.release]
 debug = false

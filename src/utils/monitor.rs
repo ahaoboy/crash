@@ -128,10 +128,11 @@ pub fn format_status(config: &CrashConfig) -> String {
     lines.push((
         "config",
         format!(
-            "{} ({})",
+            "{} ({} / {})",
             // config.config_dir.to_string_lossy(),
             get_config_dir().to_string_lossy(),
-            format_size(config.get_size(),)
+            format_size(config.get_size(),),
+            format_size(fs4::available_space(get_config_dir()).unwrap_or(0))
         ),
     ));
 
