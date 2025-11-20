@@ -1,0 +1,66 @@
+[K[48;2;218;98;125;38;2;218;98;125m [30mRT-BE88U-A1F0[38;2;218;98;125m[30m/tmp/home/root [48;2;252;161;125;38;2;218;98;125m[48;2;134;187;216;38;2;252;161;125m[48;2;6;150;154;38;2;134;187;216m[48;2;51;101;138;38;2;6;150;154m[0m
+[34mneofetch[32m
+
+[90m        #####
+[90m       #######
+[90m       ##[37mO[90m#[37mO[90m##
+[90m       #[33m#####[90m#
+[90m     ##[37m##[33m###[37m##[90m##
+[90m    #[37m##########[90m##
+[90m   #[37m############[90m##
+[90m   #[37m############[90m###
+[33m  ##[90m#[37m###########[90m##[33m#
+[33m######[90m#[37m#######[90m#[33m######
+[33m#######[90m#[37m#####[90m#[33m#######
+[33m  #####[90m#######[33m#####
+
+
+
+
+
+[17A[24C[0m[31m[1mace[0m@[31m[1mRT-BE88U-A1F0[0m
+[24C-------
+[24C[32m[1mOS: [0mLinux aarch64
+[24C[32m[1mKernel: [0m4.19.294
+[24C[32m[1mUptime: [0m9 days, 5 hours, 18 mins
+[24C[32m[1mShell: [0mfish 4.1.2
+[24C[32m[1mTerminal: [0mXTerm
+[24C[32m[1mDisk(/): [0m59 MiB / 59 MiB (100%)
+[24C[32m[1mMemory: [0m928 MiB / 2 GiB
+[24C[32m[1mTemperature: [0mCPU (avg of 1 sensors): 61.4°C
+[24C[32m[1mLocal IP: [0m198.18.0.1
+[24C[32m[1mNetwork: [0meth0 (192.168.1.3)
+[24C[32m[1m         [0mbr0 (192.168.50.1)
+[24C[32m[1mLocale: [0men_US.UTF-8
+[24C
+[24C[40m   [41m   [42m   [43m   [44m   [45m   [46m   [47m   [0m
+[24C[100m   [101m   [102m   [103m   [104m   [105m   [106m   [107m   [0m
+[0B
+[K[48;2;218;98;125;38;2;218;98;125m [30mRT-BE88U-A1F0[38;2;218;98;125m[30m/tmp/home/root [48;2;252;161;125;38;2;218;98;125m[48;2;134;187;216;38;2;252;161;125m[48;2;6;150;154;38;2;134;187;216m[48;2;51;101;138;38;2;6;150;154m[0m
+[34mcrash[m [36minstall[32m[m
+Scheduled task already exists
+Scheduled task already exists
+Installation completed successfully!
+[K[48;2;218;98;125;38;2;218;98;125m [30mRT-BE88U-A1F0[38;2;218;98;125m[30m/tmp/home/root [48;2;252;161;125;38;2;218;98;125m[48;2;134;187;216;38;2;252;161;125m[48;2;6;150;154;38;2;134;187;216m[48;2;51;101;138;38;2;6;150;154m[0m
+[34mcrash[m [36mupdate-url[m [36m-f[32m[m
+Configuration updated successfully!
+[K[48;2;218;98;125;38;2;218;98;125m [30mRT-BE88U-A1F0[38;2;218;98;125m[30m/tmp/home/root [48;2;252;161;125;38;2;218;98;125m[48;2;134;187;216;38;2;252;161;125m[48;2;6;150;154;38;2;134;187;216m[48;2;51;101;138;38;2;6;150;154m[0m
+[34mcrash[m [36mstart[m [36m-f[32m[m
+Proxy service started successfully!
+version : 0.1.0 (https://github.com/ahaoboy/crash)
+core    : Mihomo v1.19.15 (https://github.com/MetaCubeX/mihomo)
+pid     : 16862
+memory  : 94.58 MB
+web     : Metacubexd (http://198.18.0.1:9090/ui)
+status  : ✅ 5h 15m 33s (max: 12h)
+proxy   : gh-proxy
+user    : ace
+config  : /jffs/crash_config (54.56 MB / 0 B)
+[K[48;2;218;98;125;38;2;218;98;125m [30mRT-BE88U-A1F0[38;2;218;98;125m[30m/tmp/home/root [48;2;252;161;125;38;2;218;98;125m[48;2;134;187;216;38;2;252;161;125m[48;2;6;150;154;38;2;134;187;216m[48;2;51;101;138;38;2;6;150;154m[0m
+[34mcurl[m [36mgoogle.com[32m[m
+<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
+<TITLE>301 Moved</TITLE></HEAD><BODY>
+<H1>301 Moved</H1>
+The document has moved
+<A HREF="http://www.google.com/">here</A>.
+</BODY></HTML>

@@ -12,6 +12,10 @@ A Rust-based proxy core management tool supporting Clash/Mihomo/SingBox and othe
 - 🔧 Flexible configuration management
 - 🪞 Multiple GitHub mirror support for accelerated downloads
 
+<div style="display: flex;">
+  <img src="./assets/crash.svg" alt="crash"/>
+</div>
+
 ## Installation
 
 ### Quick Install
