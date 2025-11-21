@@ -69,8 +69,9 @@ pub fn format_status(config: &CrashConfig) -> String {
     let mut lines = vec![(
         "version",
         format!(
-            "{} ({})",
+            "{} {} ({})",
             env!("CARGO_PKG_VERSION"),
+            git_version::git_version!(),
             "https://github.com/ahaoboy/crash"
         ),
     )];

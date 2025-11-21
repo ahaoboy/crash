@@ -44,6 +44,7 @@ humansize = "2"
 humantime = "2"
 which = "8"
 fs4 = "0.13"
+git-version = "0.3"
 
 [profile.release]
 debug = false
