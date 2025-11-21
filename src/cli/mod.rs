@@ -8,11 +8,14 @@ use guess_target::Target;
 use crate::config::core::Core;
 pub mod commands;
 pub mod output;
-// pub use output::OutputFormatter;
+
+const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+const GIT_HASH: &str = git_version::git_version!();
+const VERSION: &str = const_str::concat!(CARGO_PKG_VERSION, " ", GIT_HASH);
 
 /// Main CLI structure
 #[derive(Parser, Clone, Debug)]
-#[command(name = "crash", version)]
+#[command(name = "crash", version=VERSION)]
 #[command(about = "A tool for managing proxy cores like Clash/Mihomo/SingBox", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
