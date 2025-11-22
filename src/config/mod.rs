@@ -528,7 +528,7 @@ tun:
         let exe = std::env::current_exe()?;
         let dir = exe
             .parent()
-            .ok_or_else(|| CrashError::Download("crash repo not found".to_string()))?;
+            .ok_or_else(|| CrashError::Download("crash dir not found".to_string()))?;
         self.ei(
             "ahaoboy/crash",
             &dir.to_string_lossy(),
