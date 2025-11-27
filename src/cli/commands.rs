@@ -281,7 +281,7 @@ async fn handle_run_task() -> Result<()> {
     handle_update_url(true).await?;
 
     // Update geo databases
-    handle_update_geo(true).await?;
+    // handle_update_geo(true).await?;
 
     handle_start(true)?;
 
