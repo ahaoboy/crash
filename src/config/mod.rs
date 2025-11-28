@@ -37,16 +37,10 @@ pub struct CrashConfig {
     pub target: Target,
     pub web: WebConfig,
     pub url: String,
-    /// Maximum runtime in hours before automatic restart (0 = disabled)
-    #[serde(default = "default_max_runtime_hours")]
     pub max_runtime_hours: u64,
 
     #[serde(default)]
     pub stop_force: bool,
-}
-
-fn default_max_runtime_hours() -> u64 {
-    12
 }
 
 impl Default for CrashConfig {
@@ -61,7 +55,7 @@ impl Default for CrashConfig {
             web: WebConfig::default(),
             url: String::new(),
             stop_force: false,
-            max_runtime_hours: default_max_runtime_hours(),
+            max_runtime_hours: 0,
         }
     }
 }

@@ -167,8 +167,8 @@ crash remove-task
 
 ```bash
 # Set GitHub download proxy
-crash proxy direct      # Direct connection
-crash proxy ghproxy     # gh-proxy mirror
+crash proxy github      # Direct connection
+crash proxy gh-proxy    # gh-proxy mirror
 crash proxy xget        # xget mirror
 crash proxy jsdelivr    # jsdelivr CDN
 ```
@@ -224,7 +224,7 @@ crash completions elvish > ~/.config/elvish/lib/crash.elv
 ### Maximum Runtime
 
 ```bash
-# Set maximum runtime before automatic restart (default: 12 hours)
+# Set maximum runtime before automatic restart
 crash max-runtime 24
 
 # Disable automatic restart (run indefinitely)
