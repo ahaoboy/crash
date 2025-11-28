@@ -325,6 +325,7 @@ impl CrashConfig {
             .ei(
                 &url,
                 &get_config_dir().to_string_lossy(),
+                vec![],
                 Some(self.core.name().to_string()),
             )
             .await;
@@ -347,12 +348,19 @@ impl CrashConfig {
         Ok(())
     }
 
-    pub async fn ei(&self, url: &str, dir: &str, alias: Option<String>) -> anyhow::Result<()> {
+    pub async fn ei(
+        &self,
+        url: &str,
+        dir: &str,
+        name: Vec<String>,
+        alias: Option<String>,
+    ) -> anyhow::Result<()> {
         let args = easy_install::Args {
             url: url.to_string(),
             dir: Some(dir.to_string()),
             install_only: true,
             proxy: Some(self.proxy),
+            name,
             alias,
             target: Some(self.target),
             ..Default::default()
@@ -381,6 +389,7 @@ impl CrashConfig {
             .ei(
                 &url,
                 &(config_dir.to_string_lossy()),
+                vec![],
                 Some(self.web.ui_name().to_string()),
             )
             .await;
@@ -426,7 +435,7 @@ impl CrashConfig {
             log_info!("Downloading GeoIP database: {}", name);
 
             if self
-                .ei(&url, &get_config_dir().to_string_lossy(), None)
+                .ei(&url, &get_config_dir().to_string_lossy(), vec![], None)
                 .await
                 .is_ok()
             {
@@ -530,8 +539,9 @@ tun:
             .parent()
             .ok_or_else(|| CrashError::Download("crash dir not found".to_string()))?;
         self.ei(
-            "ahaoboy/crash",
+            "ahaoboy/crash-assets",
             &dir.to_string_lossy(),
+            vec!["crash".to_string()],
             Some("crash".to_string()),
         )
         .await
