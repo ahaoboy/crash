@@ -1,5 +1,6 @@
 // Configuration management module
 
+use crate::cli::UpgradeRepo;
 use crate::config::core::Core;
 use crate::error::{CrashError, Result};
 use crate::utils::command::execute;
@@ -9,6 +10,7 @@ use crate::utils::process::get_pid;
 use crate::utils::process::{start, stop};
 use crate::utils::{current_timestamp, file_exists, get_dir_size, is_url, strip_suffix};
 use crate::{log_debug, log_info};
+use easy_install::{InstallConfig, ei};
 use github_proxy::{Proxy, Resource};
 use guess_target::Target;
 use serde::{Deserialize, Serialize};
@@ -321,14 +323,14 @@ impl CrashConfig {
         log_info!("Downloading core from: {}", url);
 
         // Use easy-install to download and extract
-        let result = self
-            .ei(
-                &url,
+        let result = ei(
+            &url,
+            &self.ei_config(
                 &get_config_dir().to_string_lossy(),
-                vec![],
                 Some(self.core.name().to_string()),
-            )
-            .await;
+            ),
+        )
+        .await;
 
         if result.is_err() {
             return Err(CrashError::Download(
@@ -348,24 +350,15 @@ impl CrashConfig {
         Ok(())
     }
 
-    pub async fn ei(
-        &self,
-        url: &str,
-        dir: &str,
-        name: Vec<String>,
-        alias: Option<String>,
-    ) -> anyhow::Result<()> {
-        let args = easy_install::Args {
-            url: url.to_string(),
+    pub fn ei_config(&self, dir: &str, alias: Option<String>) -> InstallConfig {
+        easy_install::InstallConfig {
             dir: Some(dir.to_string()),
             install_only: true,
-            proxy: Some(self.proxy),
-            name,
+            proxy: self.proxy,
             alias,
             target: Some(self.target),
             ..Default::default()
-        };
-        easy_install::run_main(args).await
+        }
     }
     /// Install the web UI
     pub async fn install_ui(&self, force: bool) -> Result<()> {
@@ -385,14 +378,14 @@ impl CrashConfig {
         log_info!("Downloading UI from: {}", url);
 
         // Use easy-install to download and extract
-        let result = self
-            .ei(
-                &url,
+        let result = ei(
+            &url,
+            &self.ei_config(
                 &(config_dir.to_string_lossy()),
-                vec![],
                 Some(self.web.ui_name().to_string()),
-            )
-            .await;
+            ),
+        )
+        .await;
 
         if result.is_err() {
             return Err(CrashError::Download("Failed to install UI".to_string()));
@@ -434,10 +427,12 @@ impl CrashConfig {
 
             log_info!("Downloading GeoIP database: {}", name);
 
-            if self
-                .ei(&url, &get_config_dir().to_string_lossy(), vec![], None)
-                .await
-                .is_ok()
+            if ei(
+                &url,
+                &self.ei_config(&get_config_dir().to_string_lossy(), None),
+            )
+            .await
+            .is_ok()
             {
                 log_info!("Downloaded {} successfully", name);
             } else {
@@ -533,16 +528,23 @@ tun:
         get_dir_size(&get_config_dir())
     }
 
-    pub async fn upgrade(&self) -> Result<()> {
+    pub async fn upgrade(&self, repo: UpgradeRepo) -> Result<()> {
         let exe = std::env::current_exe()?;
         let dir = exe
             .parent()
             .ok_or_else(|| CrashError::Download("crash dir not found".to_string()))?;
-        self.ei(
-            "ahaoboy/crash-assets",
-            &dir.to_string_lossy(),
-            vec!["crash".to_string()],
-            Some("crash".to_string()),
+        let dir = &dir.to_string_lossy();
+        let url = match repo {
+            UpgradeRepo::Crash => "ahaoboy/crash",
+            UpgradeRepo::CrashAssets => "ahaoboy/crash-assets",
+        };
+        ei(
+            url,
+            &InstallConfig {
+                name: vec!["crash".to_string()],
+                upx: repo == UpgradeRepo::Crash,
+                ..self.ei_config(dir, Some("crash".to_string()))
+            },
         )
         .await
         .map_err(|e| CrashError::Download(e.to_string()))?;

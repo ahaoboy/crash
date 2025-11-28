@@ -1,6 +1,6 @@
 // Command handler implementations
 
-use crate::cli::{Cli, Commands};
+use crate::cli::{Cli, Commands, UpgradeRepo};
 use crate::config::core::Core;
 use crate::config::{CrashConfig, get_config_path};
 use crate::error::CrashError;
@@ -36,7 +36,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::Host { host }) => handle_host(host),
         Some(Commands::Secret { secret }) => handle_secret(secret),
         Some(Commands::MaxRuntime { hours }) => handle_max_runtime(hours),
-        Some(Commands::Upgrade) => handle_upgrade().await,
+        Some(Commands::Upgrade { repo }) => handle_upgrade(repo).await,
         Some(Commands::Ei { args }) => handle_ei(args).await,
         Some(Commands::Completions { shell }) => handle_completions(shell),
         None => handle_status().await,
@@ -411,11 +411,11 @@ fn handle_max_runtime(hours: u64) -> Result<()> {
     Ok(())
 }
 
-async fn handle_upgrade() -> Result<()> {
+async fn handle_upgrade(repo: UpgradeRepo) -> Result<()> {
     log_info!("Executing upgrade command");
 
     let config = CrashConfig::load()?;
-    config.upgrade().await?;
+    config.upgrade(repo).await?;
 
     Ok(())
 }

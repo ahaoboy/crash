@@ -1,11 +1,12 @@
 // CLI module for command-line interface
 
+use crate::config::core::Core;
 use clap::{Parser, Subcommand};
 use clap_complete::Shell;
 use github_proxy::Proxy;
 use guess_target::Target;
-
-use crate::config::core::Core;
+use serde::{Deserialize, Serialize};
+use strum::{Display, EnumString, IntoStaticStr};
 pub mod commands;
 pub mod output;
 
@@ -20,6 +21,26 @@ const VERSION: &str = const_str::concat!(CARGO_PKG_VERSION, " ", GIT_HASH);
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
+}
+
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Default,
+    Display,
+    EnumString,
+    IntoStaticStr,
+    Serialize,
+    Deserialize,
+)]
+pub enum UpgradeRepo {
+    Crash,
+    #[default]
+    CrashAssets,
 }
 
 /// Available CLI commands
@@ -119,7 +140,9 @@ pub enum Commands {
     },
 
     /// Upgrade crash to the latest version
-    Upgrade,
+    Upgrade {
+        repo: UpgradeRepo,
+    },
 
     #[command(trailing_var_arg = true, allow_hyphen_values = true)]
     Ei {
