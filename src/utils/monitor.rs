@@ -6,6 +6,7 @@ use crate::utils::command::execute;
 use crate::utils::process::get_pid;
 use crate::utils::time::{current_timestamp, format_uptime};
 use crate::utils::{format_size, get_user};
+use public_ip_address::perform_lookup;
 use std::time::Duration;
 
 /// Calculate process uptime from start timestamp
@@ -65,7 +66,7 @@ pub fn get_memory_usage(pid: u32) -> Result<u64> {
 }
 
 /// Format a comprehensive status string for the application
-pub fn format_status(config: &CrashConfig) -> String {
+pub async fn format_status(config: &CrashConfig) -> String {
     let mut lines = vec![(
         "version",
         format!(
@@ -97,6 +98,17 @@ pub fn format_status(config: &CrashConfig) -> String {
             lines.push(("memory", format_size(kb * memory)));
         }
     }
+
+    // IP
+    if let Ok(response) = perform_lookup(None).await {
+        let s = if let Some(c) = response.country {
+            format!("{} ({})", response.ip, c)
+        } else {
+            format!("{}", response.ip)
+        };
+
+        lines.push(("ip", s));
+    };
 
     // Web UI info
     if let Ok(ip) = local_ip_address::local_ip() {

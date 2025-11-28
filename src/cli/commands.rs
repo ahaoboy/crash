@@ -19,9 +19,9 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
     match command {
         Some(Commands::Install { force }) => handle_install(force).await,
         Some(Commands::Proxy { proxy }) => handle_proxy(proxy),
-        Some(Commands::Start { force }) => handle_start(force),
+        Some(Commands::Start { force }) => handle_start(force).await,
         Some(Commands::Stop { force }) => handle_stop(force),
-        Some(Commands::Status) => handle_status(),
+        Some(Commands::Status) => handle_status().await,
         Some(Commands::Core { core }) => handle_core(core),
         Some(Commands::Task) => handle_task(),
         Some(Commands::RunTask) => handle_run_task().await,
@@ -39,7 +39,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::Upgrade) => handle_upgrade().await,
         Some(Commands::Ei { args }) => handle_ei(args).await,
         Some(Commands::Completions { shell }) => handle_completions(shell),
-        None => handle_status(),
+        None => handle_status().await,
     }
 }
 
@@ -84,14 +84,14 @@ fn handle_core(core: Core) -> Result<()> {
 }
 
 /// Handle start command
-fn handle_start(force: bool) -> Result<()> {
+async fn handle_start(force: bool) -> Result<()> {
     log_info!("Executing start command");
 
     CrashConfig::load()?.start(force)?;
 
     println!("Proxy service started successfully!");
 
-    handle_status()?;
+    handle_status().await?;
     Ok(())
 }
 
@@ -106,10 +106,10 @@ fn handle_stop(force: bool) -> Result<()> {
 }
 
 /// Handle status command
-fn handle_status() -> Result<()> {
+async fn handle_status() -> Result<()> {
     log_info!("Executing status command");
     let config = CrashConfig::load()?;
-    let status = format_status(&config);
+    let status = format_status(&config).await;
     println!("{}", status);
     Ok(())
 }
@@ -283,7 +283,7 @@ async fn handle_run_task() -> Result<()> {
     // Update geo databases
     // handle_update_geo(true).await?;
 
-    handle_start(true)?;
+    handle_start(true).await?;
 
     println!("Scheduled task completed successfully!");
     Ok(())
