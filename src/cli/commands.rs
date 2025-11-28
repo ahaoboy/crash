@@ -2,6 +2,7 @@
 
 use crate::cli::{Cli, Commands, UpgradeRepo};
 use crate::config::core::Core;
+use crate::config::web::UiType;
 use crate::config::{CrashConfig, get_config_path};
 use crate::error::CrashError;
 use crate::log_info;
@@ -13,7 +14,6 @@ use clap_complete::{Shell, generate};
 use github_proxy::Proxy;
 use guess_target::Target;
 use std::io;
-use std::str::FromStr;
 
 pub async fn handle(command: Option<Commands>) -> Result<()> {
     match command {
@@ -333,20 +333,11 @@ async fn handle_update() -> Result<()> {
 }
 
 /// Handle ui command
-fn handle_ui(ui: String) -> Result<()> {
+fn handle_ui(ui: UiType) -> Result<()> {
     log_info!("Setting UI to: {}", ui);
 
-    use crate::config::web::UiType;
-
-    let ui_type = UiType::from_str(&ui).map_err(|_| {
-        CrashError::Config(format!(
-            "Invalid UI type: {}. Valid options: Metacubexd, Zashboard, Yacd",
-            ui
-        ))
-    })?;
-
     let mut config = CrashConfig::load()?;
-    config.web.ui = ui_type;
+    config.web.ui = ui;
     config.save()?;
 
     println!("Web UI set to: {}", ui);

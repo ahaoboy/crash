@@ -1,5 +1,6 @@
 // Web UI configuration
 
+use clap::ValueEnum;
 use github_proxy::{Proxy, Resource};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -19,6 +20,7 @@ use strum::{Display, EnumString, IntoStaticStr};
     IntoStaticStr,
     Serialize,
     Deserialize,
+    ValueEnum,
 )]
 pub enum UiType {
     #[default]

@@ -1,7 +1,7 @@
 // CLI module for command-line interface
 
-use crate::config::core::Core;
-use clap::{Parser, Subcommand};
+use crate::config::{core::Core, web::UiType};
+use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 use github_proxy::Proxy;
 use guess_target::Target;
@@ -36,6 +36,7 @@ pub struct Cli {
     IntoStaticStr,
     Serialize,
     Deserialize,
+    ValueEnum,
 )]
 pub enum UpgradeRepo {
     Crash,
@@ -56,6 +57,7 @@ pub enum Commands {
     /// Set the GitHub proxy to use for downloads
     Proxy {
         /// Proxy type (e.g., Direct, Ghproxy, etc.)
+        #[arg(ignore_case = true)]
         proxy: Proxy,
     },
 
@@ -72,6 +74,7 @@ pub enum Commands {
     },
 
     Core {
+        #[arg(ignore_case = true)]
         core: Core,
     },
 
@@ -114,10 +117,12 @@ pub enum Commands {
     /// Set the web UI type
     Ui {
         /// UI type (Metacubexd, Zashboard, Yacd)
-        ui: String,
+        #[arg(ignore_case = true)]
+        ui: UiType,
     },
 
     Target {
+        #[arg(ignore_case = true)]
         target: Target,
     },
 
@@ -141,6 +146,7 @@ pub enum Commands {
 
     /// Upgrade crash to the latest version
     Upgrade {
+        #[arg(default_value_t = UpgradeRepo::CrashAssets, ignore_case = true)]
         repo: UpgradeRepo,
     },
 
@@ -152,6 +158,7 @@ pub enum Commands {
     /// Generate shell completion scripts
     Completions {
         /// Shell type (bash, zsh, fish, powershell, elvish)
+        #[arg(ignore_case = true)]
         shell: Shell,
     },
 }
