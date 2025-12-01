@@ -68,16 +68,16 @@ impl Core {
 
         let filename = match (self, target) {
             (Mihomo, Target::X86_64PcWindowsMsvc | Target::X86_64PcWindowsGnu) => {
-                "mihomo-windows-amd64-v1.19.16.tar.gz"
+                "mihomo-windows-amd64.tar.gz"
             }
             (Mihomo, Target::Aarch64UnknownLinuxMusl | Target::Aarch64UnknownLinuxGnu) => {
-                "mihomo-linux-arm64-v1.19.16.tar.gz"
+                "mihomo-linux-arm64.tar.gz"
             }
             (Mihomo, Target::X86_64UnknownLinuxGnu | Target::X86_64UnknownLinuxMusl) => {
-                "mihomo-linux-amd64-v1.19.16.tar.gz"
+                "mihomo-linux-amd64.tar.gz"
             }
-            (Mihomo, Target::Aarch64AppleDarwin) => "mihomo-darwin-arm64-v1.19.16.tar.gz",
-            (Mihomo, Target::X86_64AppleDarwin) => "mihomo-darwin-amd64-v1.19.16.tar.gz",
+            (Mihomo, Target::Aarch64AppleDarwin) => "mihomo-darwin-arm64.tar.gz",
+            (Mihomo, Target::X86_64AppleDarwin) => "mihomo-darwin-amd64.tar.gz",
 
             (Clash, Target::Aarch64UnknownLinuxMusl | Target::Aarch64UnknownLinuxGnu) => {
                 "clash-linux-arm64.tar.gz"
@@ -85,12 +85,12 @@ impl Core {
             (Clash, Target::X86_64UnknownLinuxGnu) => "clash-linux-amd64.tar.gz",
 
             (Singbox, Target::X86_64PcWindowsMsvc | Target::X86_64PcWindowsGnu) => {
-                "sing-box-1.12.12-windows-amd64.tar.gz"
+                "sing-box-windows-amd64.tar.gz"
             }
             (Singbox, Target::Aarch64UnknownLinuxMusl | Target::Aarch64UnknownLinuxGnu) => {
-                "sing-box-1.12.12-linux-arm64.tar.gz"
+                "sing-box-linux-arm64.tar.gz"
             }
-            (Singbox, Target::X86_64UnknownLinuxGnu) => "sing-box-1.12.12-linux-amd64.tar.gz",
+            (Singbox, Target::X86_64UnknownLinuxGnu) => "sing-box-linux-amd64.tar.gz",
             _ => {
                 return Err(CrashError::Config(format!(
                     "Unsupported core type {:?} on target {:?}",
