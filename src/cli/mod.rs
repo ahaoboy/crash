@@ -6,7 +6,7 @@ use clap_complete::Shell;
 use github_proxy::Proxy;
 use guess_target::Target;
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumString, IntoStaticStr};
+use strum::{EnumString, IntoStaticStr};
 pub mod commands;
 pub mod output;
 
@@ -31,7 +31,6 @@ pub struct Cli {
     Eq,
     Hash,
     Default,
-    Display,
     EnumString,
     IntoStaticStr,
     Serialize,
@@ -42,6 +41,15 @@ pub enum UpgradeRepo {
     Crash,
     #[default]
     CrashAssets,
+}
+
+impl std::fmt::Display for UpgradeRepo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UpgradeRepo::Crash => write!(f, "crash"),
+            UpgradeRepo::CrashAssets => write!(f, "crash-assets"),
+        }
+    }
 }
 
 /// Available CLI commands
