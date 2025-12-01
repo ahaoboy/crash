@@ -104,7 +104,7 @@ crash install -f
 ### Configuration Management
 
 ```bash
-# Set configuration file URL
+# Set configuration file(support URL or local path)
 crash url <config-url>
 
 # Update configuration from URL
