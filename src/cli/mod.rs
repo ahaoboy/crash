@@ -1,6 +1,6 @@
 // CLI module for command-line interface
 
-use crate::config::{core::Core, web::UiType};
+use crate::config::web::UiType;
 use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 use github_proxy::Proxy;
@@ -133,17 +133,13 @@ pub enum Commands {
         force: bool,
     },
 
-    Core {
-        #[arg(ignore_case = true)]
-        core: Core,
-    },
-
     /// Show service status
     Status,
 
     /// Run scheduled update task
     RunTask,
 
+    /// Remove scheduled update task
     RemoveTask,
 
     /// Update configuration from URL
@@ -165,10 +161,9 @@ pub enum Commands {
         repo: UpgradeRepo,
     },
 
+    /// Usage: ei.exe [OPTIONS] [URL] [COMMAND]
     #[command(trailing_var_arg = true, allow_hyphen_values = true)]
-    Ei {
-        args: Vec<String>,
-    },
+    Ei { args: Vec<String> },
 
     /// Generate shell completion scripts
     Completions {

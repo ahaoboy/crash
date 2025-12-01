@@ -552,7 +552,8 @@ tun:
 
         if source.is_empty() {
             return Err(CrashError::Config(
-                "Configuration URL is empty. Please set it first with 'crash config url <url>'".to_string(),
+                "Configuration URL is empty. Please set it first with 'crash config url <url>'"
+                    .to_string(),
             ));
         }
 

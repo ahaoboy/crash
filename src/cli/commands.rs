@@ -2,7 +2,6 @@
 
 use crate::cli::{Cli, Commands, ConfigCommands, InstallCommands, UpgradeRepo};
 use crate::config::CrashConfig;
-use crate::config::core::Core;
 use crate::error::CrashError;
 use crate::log_info;
 use crate::utils::command::execute;
@@ -18,7 +17,6 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::Start { force }) => handle_start(force).await,
         Some(Commands::Stop { force }) => handle_stop(force),
         Some(Commands::Status) => handle_status().await,
-        Some(Commands::Core { core }) => handle_core(core),
         Some(Commands::RunTask) => handle_run_task().await,
         Some(Commands::RemoveTask) => handle_remove_task(),
         Some(Commands::UpdateUrl { force }) => handle_update_url(force).await,
@@ -73,16 +71,6 @@ async fn handle_ei(args: Vec<String>) -> Result<()> {
     let mut v = vec!["ei".to_string()];
     v.extend(args);
     easy_install::run_main(easy_install::Args::parse_from(v)).await
-}
-
-fn handle_core(core: Core) -> Result<()> {
-    log_info!("Executing core command");
-
-    let mut config = CrashConfig::load()?;
-    config.core = core;
-    config.save()?;
-    println!("Core set to: {}", core);
-    Ok(())
 }
 
 /// Handle start command
