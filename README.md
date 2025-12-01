@@ -110,19 +110,6 @@ crash install task        # Install scheduled tasks only
 crash install -f core
 ```
 
-### Configuration Management
-
-```bash
-# Set configuration file(support URL or local path)
-crash url <config-url>
-
-# Update configuration from URL
-crash update-url -f
-
-# Update configuration from saved URL
-crash update
-```
-
 ### Service Control
 
 ```bash
@@ -143,6 +130,10 @@ All configuration options are now unified under the `config` subcommand:
 ```bash
 # View all configuration as JSON
 crash config
+
+# Configuration URL
+crash config url                # Show current URL
+crash config url <config-url>   # Set configuration URL (support URL or local path)
 
 # GitHub download proxy
 crash config proxy              # Show current proxy

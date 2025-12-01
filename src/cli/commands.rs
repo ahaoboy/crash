@@ -21,7 +21,6 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
         Some(Commands::Core { core }) => handle_core(core),
         Some(Commands::RunTask) => handle_run_task().await,
         Some(Commands::RemoveTask) => handle_remove_task(),
-        Some(Commands::Url { url }) => handle_url(url),
         Some(Commands::UpdateUrl { force }) => handle_update_url(force).await,
         Some(Commands::Config { command }) => handle_config(command),
         Some(Commands::Upgrade { repo }) => handle_upgrade(repo).await,
@@ -292,19 +291,6 @@ async fn handle_run_task() -> Result<()> {
     Ok(())
 }
 
-/// Handle url command
-fn handle_url(url: String) -> Result<()> {
-    log_info!("Setting configuration URL to: {}", url);
-
-    let mut config = CrashConfig::load()?;
-
-    config.url = url.clone();
-    config.save()?;
-
-    println!("Configuration URL set to: {}", url);
-    Ok(())
-}
-
 /// Handle update-url command
 async fn handle_update_url(force: bool) -> Result<()> {
     log_info!("Updating configuration from URL (force: {})", force);
@@ -335,6 +321,19 @@ fn handle_config(command: Option<ConfigCommands>) -> Result<()> {
             let config = CrashConfig::load()?;
             let json = serde_json::to_string_pretty(&config)?;
             println!("{}", json);
+        }
+        Some(ConfigCommands::Url { value }) => {
+            let mut config = CrashConfig::load()?;
+            match value {
+                Some(url) => {
+                    config.url = url.clone();
+                    config.save()?;
+                    println!("Configuration URL set to: {}", url);
+                }
+                None => {
+                    println!("{}", config.url);
+                }
+            }
         }
         Some(ConfigCommands::Proxy { value }) => {
             let mut config = CrashConfig::load()?;

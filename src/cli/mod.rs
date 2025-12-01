@@ -68,6 +68,11 @@ pub enum InstallCommands {
 /// Config subcommands
 #[derive(Subcommand, Clone, Debug)]
 pub enum ConfigCommands {
+    /// Get or set the configuration URL
+    Url {
+        /// Configuration file URL, omit to show current value
+        value: Option<String>,
+    },
     /// Get or set the GitHub proxy for downloads
     Proxy {
         /// Proxy type (e.g., Direct, Ghproxy, etc.), omit to show current value
@@ -140,12 +145,6 @@ pub enum Commands {
     RunTask,
 
     RemoveTask,
-
-    /// Set the configuration URL
-    Url {
-        /// Configuration file URL
-        url: String,
-    },
 
     /// Update configuration from URL
     UpdateUrl {
