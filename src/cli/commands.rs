@@ -319,7 +319,7 @@ async fn handle_update_geo(force: bool) -> Result<()> {
 
     let config = CrashConfig::load()?;
 
-    config.update_geo(force).await?;
+    config.install_geo(force).await?;
 
     println!("GeoIP databases updated successfully!");
     Ok(())

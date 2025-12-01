@@ -4,7 +4,7 @@ use crate::cli::UpgradeRepo;
 use crate::config::core::Core;
 use crate::error::{CrashError, Result};
 use crate::utils::command::execute;
-use crate::utils::download::{download_file, download_text};
+use crate::utils::download::download_text;
 use crate::utils::fs::{atomic_write, ensure_dir};
 use crate::utils::process::get_pid;
 use crate::utils::process::{start, stop};
@@ -592,53 +592,6 @@ tun:
         })?;
 
         log_info!("Configuration updated successfully");
-        Ok(())
-    }
-
-    pub async fn update_geo(&self, force: bool) -> Result<()> {
-        log_info!("Updating GeoIP databases (force: {})", force);
-
-        use crate::config::core::Core;
-        use github_proxy::Resource;
-
-        let databases = self.core.get_geo_files();
-
-        for db_name in databases {
-            let db_path = get_config_dir().join(db_name);
-
-            if file_exists(&db_path) && !force {
-                log_info!("Database {} already exists, skipping", db_name);
-                continue;
-            }
-
-            log_info!("Updating GeoIP database: {}", db_name);
-
-            let resource = match self.core {
-                Core::Mihomo => Resource::Release {
-                    owner: "MetaCubeX".to_string(),
-                    repo: "meta-rules-dat".to_string(),
-                    tag: "latest".to_string(),
-                    name: db_name.to_string(),
-                },
-                Core::Clash => Resource::File {
-                    owner: "juewuy".to_string(),
-                    repo: "ShellCrash".to_string(),
-                    reference: "master".to_string(),
-                    path: format!("bin/geodata/{}", db_name),
-                },
-                Core::Singbox => continue,
-            };
-
-            let url = self.proxy.url(resource).ok_or_else(|| {
-                crate::error::CrashError::Download("Failed to get geo database URL".to_string())
-            })?;
-
-            download_file(&url, &db_path).await?;
-
-            log_info!("Updated {} successfully", db_name);
-        }
-
-        log_info!("GeoIP databases updated successfully");
         Ok(())
     }
 }
