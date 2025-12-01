@@ -102,7 +102,7 @@ pub async fn format_status(config: &CrashConfig) -> String {
     // IP
     if let Ok(response) = perform_lookup(None).await {
         let ip = response.ip;
-        let s = match (response.country, response.city) {
+        let s = match (response.country_code, response.city) {
             (Some(country), Some(city)) => format!("{} ({}-{})", ip, country, city),
             (Some(country), None) => format!("{} ({})", ip, country),
             _ => format!("{}", ip),
