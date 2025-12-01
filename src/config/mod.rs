@@ -550,6 +550,12 @@ tun:
         let dest = &self.core_config_path();
         let source = &self.url;
 
+        if source.is_empty() {
+            return Err(CrashError::Config(
+                "Configuration URL is empty. Please set it first with 'crash config url <url>'".to_string(),
+            ));
+        }
+
         if file_exists(dest) && !force {
             log_info!("Configuration file already exists at {}", dest.display());
             return Ok(());
