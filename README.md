@@ -94,11 +94,20 @@ cargo install --path .
 ### Initialize and Install
 
 ```bash
-# Install proxy core and UI components
+# Install all components (core, ui, geo, task)
 crash install
 
-# Force reinstallation
+# Force reinstallation of all
 crash install -f
+
+# Install specific components
+crash install core        # Install proxy core only
+crash install ui          # Install web UI only
+crash install geo         # Install GeoIP databases only
+crash install task        # Install scheduled tasks only
+
+# Force install specific component
+crash install -f core
 ```
 
 ### Configuration Management
@@ -127,34 +136,52 @@ crash stop
 crash status
 ```
 
-### GeoIP Database Management
+### Configuration Management (config subcommand)
+
+All configuration options are now unified under the `config` subcommand:
 
 ```bash
-# Update GeoIP databases
-crash update-geo
+# View all configuration as JSON
+crash config
 
-# Force update
-crash update-geo --force
-```
+# GitHub download proxy
+crash config proxy              # Show current proxy
+crash config proxy gh-proxy     # Set proxy (direct, gh-proxy, xget, jsdelivr, etc.)
 
-### Web UI Configuration
+# Web UI type
+crash config ui                 # Show current UI
+crash config ui metacubexd      # Set UI (metacubexd, zashboard, yacd)
+# Web controller host
+crash config host               # Show current host
+crash config host :9090         # Set host
 
-```bash
-# Set Web UI type
-crash ui metacubexd  # or zashboard, yacd
+# Web controller secret
+crash config secret             # Show current secret
+crash config secret <secret>    # Set secret
 
-# Set Web controller host
-crash host :9090
+# Target platform
+crash config target             # Show current target
+crash config target x86_64-unknown-linux-musl  # Set target
 
-# Set Web controller secret
-crash secret <your-secret>
+# Other common targets
+crash config target aarch64-unknown-linux-musl    # ARM64 Linux (musl)
+crash config target x86_64-unknown-linux-gnu      # x86_64 Linux (gnu)
+crash config target aarch64-unknown-linux-gnu     # ARM64 Linux (gnu)
+crash config target x86_64-pc-windows-msvc        # Windows x64
+crash config target aarch64-apple-darwin          # macOS Apple Silicon
+crash config target x86_64-apple-darwin           # macOS Intel
+
+# Maximum runtime (hours, 0 = disabled)
+crash config max-runtime        # Show current max-runtime
+crash config max-runtime 24     # Set max-runtime to 24 hours
+crash config max-runtime 0      # Disable automatic restart
 ```
 
 ### Scheduled Tasks
 
 ```bash
-# Install scheduled tasks (auto-update config and databases)
-crash task
+# Install scheduled tasks (via install subcommand)
+crash install task
 
 # Manually run scheduled task
 crash run-task
@@ -163,40 +190,11 @@ crash run-task
 crash remove-task
 ```
 
-### Proxy Settings
-
-```bash
-# Set GitHub download proxy
-crash proxy github      # Direct connection
-crash proxy gh-proxy    # gh-proxy mirror
-crash proxy xget        # xget mirror
-crash proxy jsdelivr    # jsdelivr CDN
-```
-
 ### Self-Upgrade
 
 ```bash
 crash upgrade
 ```
-
-### Target Platform Configuration
-
-Set the target platform for downloading proxy cores. Using musl targets is recommended for better compatibility across different Linux distributions:
-
-```bash
-# Recommended: Use musl for better compatibility
-crash target x86_64-unknown-linux-musl
-
-# Other common targets
-crash target aarch64-unknown-linux-musl    # ARM64 Linux (musl)
-crash target x86_64-unknown-linux-gnu      # x86_64 Linux (gnu)
-crash target aarch64-unknown-linux-gnu     # ARM64 Linux (gnu)
-crash target x86_64-pc-windows-msvc        # Windows x64
-crash target aarch64-apple-darwin          # macOS Apple Silicon
-crash target x86_64-apple-darwin           # macOS Intel
-```
-
-**Why musl?** musl-based binaries are statically linked and work across different Linux distributions without dependency issues, making them more portable than gnu-based builds.
 
 ### Shell Completions
 
@@ -219,16 +217,6 @@ crash completions powershell >> $PROFILE
 
 # Elvish
 crash completions elvish > ~/.config/elvish/lib/crash.elv
-```
-
-### Maximum Runtime
-
-```bash
-# Set maximum runtime before automatic restart
-crash max-runtime 24
-
-# Disable automatic restart (run indefinitely)
-crash max-runtime 0
 ```
 
 ### ei
@@ -308,21 +296,6 @@ cargo build --release
 
 # Run tests
 cargo test
-```
-
-### Using just Commands
-
-The project includes a `justfile`. You can use [just](https://github.com/casey/just) to simplify development:
-
-```bash
-# List available commands
-just --list
-
-# Build project
-just build
-
-# Run tests
-just test
 ```
 
 ## License

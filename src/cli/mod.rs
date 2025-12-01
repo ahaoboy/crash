@@ -52,21 +52,68 @@ impl std::fmt::Display for UpgradeRepo {
     }
 }
 
+/// Install subcommands
+#[derive(Subcommand, Clone, Debug)]
+pub enum InstallCommands {
+    /// Install proxy core
+    Core,
+    /// Install web UI
+    Ui,
+    /// Install GeoIP databases
+    Geo,
+    /// Install scheduled tasks
+    Task,
+}
+
+/// Config subcommands
+#[derive(Subcommand, Clone, Debug)]
+pub enum ConfigCommands {
+    /// Get or set the GitHub proxy for downloads
+    Proxy {
+        /// Proxy type (e.g., Direct, Ghproxy, etc.), omit to show current value
+        #[arg(ignore_case = true)]
+        value: Option<Proxy>,
+    },
+    /// Get or set the web UI type
+    Ui {
+        /// UI type (Metacubexd, Zashboard, Yacd), omit to show current value
+        #[arg(ignore_case = true)]
+        value: Option<UiType>,
+    },
+    /// Get or set the target platform
+    Target {
+        /// Target platform, omit to show current value
+        #[arg(ignore_case = true)]
+        value: Option<Target>,
+    },
+    /// Get or set the web controller host
+    Host {
+        /// Host address (e.g., :9090), omit to show current value
+        value: Option<String>,
+    },
+    /// Get or set the web controller secret
+    Secret {
+        /// Secret key for authentication, omit to show current value
+        value: Option<String>,
+    },
+    /// Get or set maximum runtime in hours (0 = disabled)
+    MaxRuntime {
+        /// Maximum runtime in hours (0 to disable), omit to show current value
+        value: Option<u64>,
+    },
+}
+
 /// Available CLI commands
 #[derive(Subcommand, Clone, Debug)]
 pub enum Commands {
     /// Install proxy core and UI components
     Install {
-        /// Force reinstallation even if already installed
+        /// Force reinstallation even if already installed (applies to all when no subcommand)
         #[arg(short, long, default_value_t = false)]
         force: bool,
-    },
 
-    /// Set the GitHub proxy to use for downloads
-    Proxy {
-        /// Proxy type (e.g., Direct, Ghproxy, etc.)
-        #[arg(ignore_case = true)]
-        proxy: Proxy,
+        #[command(subcommand)]
+        command: Option<InstallCommands>,
     },
 
     /// Start the proxy service
@@ -89,9 +136,6 @@ pub enum Commands {
     /// Show service status
     Status,
 
-    /// Manage scheduled tasks
-    Task,
-
     /// Run scheduled update task
     RunTask,
 
@@ -110,46 +154,10 @@ pub enum Commands {
         force: bool,
     },
 
-    /// Update GeoIP databases
-    UpdateGeo {
-        /// Force update even if files exist
-        #[arg(short, long, default_value_t = false)]
-        force: bool,
-    },
-
-    /// Update configuration from stored URL
-    Update,
-
-    Config,
-
-    /// Set the web UI type
-    Ui {
-        /// UI type (Metacubexd, Zashboard, Yacd)
-        #[arg(ignore_case = true)]
-        ui: UiType,
-    },
-
-    Target {
-        #[arg(ignore_case = true)]
-        target: Target,
-    },
-
-    /// Set the web controller host
-    Host {
-        /// Host address (e.g., :9090)
-        host: String,
-    },
-
-    /// Set the web controller secret
-    Secret {
-        /// Secret key for authentication
-        secret: String,
-    },
-
-    /// Set maximum runtime in hours before automatic restart (0 = disabled)
-    MaxRuntime {
-        /// Maximum runtime in hours (0 to disable)
-        hours: u64,
+    /// View or modify configuration
+    Config {
+        #[command(subcommand)]
+        command: Option<ConfigCommands>,
     },
 
     /// Upgrade crash to the latest version

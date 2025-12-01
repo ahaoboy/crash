@@ -1,9 +1,8 @@
 // Command handler implementations
 
-use crate::cli::{Cli, Commands, UpgradeRepo};
+use crate::cli::{Cli, Commands, ConfigCommands, InstallCommands, UpgradeRepo};
+use crate::config::CrashConfig;
 use crate::config::core::Core;
-use crate::config::web::UiType;
-use crate::config::{CrashConfig, get_config_path};
 use crate::error::CrashError;
 use crate::log_info;
 use crate::utils::command::execute;
@@ -11,31 +10,20 @@ use crate::utils::monitor::format_status;
 use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use clap_complete::{Shell, generate};
-use github_proxy::Proxy;
-use guess_target::Target;
 use std::io;
 
 pub async fn handle(command: Option<Commands>) -> Result<()> {
     match command {
-        Some(Commands::Install { force }) => handle_install(force).await,
-        Some(Commands::Proxy { proxy }) => handle_proxy(proxy),
+        Some(Commands::Install { force, command }) => handle_install(force, command).await,
         Some(Commands::Start { force }) => handle_start(force).await,
         Some(Commands::Stop { force }) => handle_stop(force),
         Some(Commands::Status) => handle_status().await,
         Some(Commands::Core { core }) => handle_core(core),
-        Some(Commands::Task) => handle_task(),
         Some(Commands::RunTask) => handle_run_task().await,
         Some(Commands::RemoveTask) => handle_remove_task(),
         Some(Commands::Url { url }) => handle_url(url),
         Some(Commands::UpdateUrl { force }) => handle_update_url(force).await,
-        Some(Commands::UpdateGeo { force }) => handle_update_geo(force).await,
-        Some(Commands::Update) => handle_update().await,
-        Some(Commands::Config) => handle_config(),
-        Some(Commands::Ui { ui }) => handle_ui(ui),
-        Some(Commands::Target { target }) => handle_target(target),
-        Some(Commands::Host { host }) => handle_host(host),
-        Some(Commands::Secret { secret }) => handle_secret(secret),
-        Some(Commands::MaxRuntime { hours }) => handle_max_runtime(hours),
+        Some(Commands::Config { command }) => handle_config(command),
         Some(Commands::Upgrade { repo }) => handle_upgrade(repo).await,
         Some(Commands::Ei { args }) => handle_ei(args).await,
         Some(Commands::Completions { shell }) => handle_completions(shell),
@@ -44,12 +32,39 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
 }
 
 /// Handle install command
-async fn handle_install(force: bool) -> Result<()> {
-    log_info!("Executing install command (force: {})", force);
+async fn handle_install(force: bool, command: Option<InstallCommands>) -> Result<()> {
+    log_info!(
+        "Executing install command (force: {}, subcommand: {:?})",
+        force,
+        command
+    );
 
-    CrashConfig::load()?.install(force).await?;
-    handle_task()?;
-    println!("Installation completed successfully!");
+    let config = CrashConfig::load()?;
+
+    match command {
+        Some(InstallCommands::Core) => {
+            config.install_core(force).await?;
+            println!("Core installation completed successfully!");
+        }
+        Some(InstallCommands::Ui) => {
+            config.install_ui(force).await?;
+            println!("UI installation completed successfully!");
+        }
+        Some(InstallCommands::Geo) => {
+            config.install_geo(force).await?;
+            println!("Geo installation completed successfully!");
+        }
+        Some(InstallCommands::Task) => {
+            handle_task()?;
+            println!("Task installation completed successfully!");
+        }
+        None => {
+            // Install all components
+            config.install(force).await?;
+            handle_task()?;
+            println!("Installation completed successfully!");
+        }
+    }
 
     Ok(())
 }
@@ -59,18 +74,6 @@ async fn handle_ei(args: Vec<String>) -> Result<()> {
     let mut v = vec!["ei".to_string()];
     v.extend(args);
     easy_install::run_main(easy_install::Args::parse_from(v)).await
-}
-
-/// Handle proxy command
-fn handle_proxy(proxy: Proxy) -> Result<()> {
-    log_info!("Setting proxy to: {}", proxy);
-    let mut config = CrashConfig::load()?;
-
-    config.proxy = proxy;
-    config.save()?;
-
-    println!("Proxy set to: {}", config.proxy);
-    Ok(())
 }
 
 fn handle_core(core: Core) -> Result<()> {
@@ -313,95 +316,6 @@ async fn handle_update_url(force: bool) -> Result<()> {
     Ok(())
 }
 
-/// Handle update-geo command
-async fn handle_update_geo(force: bool) -> Result<()> {
-    log_info!("Updating GeoIP databases (force: {})", force);
-
-    let config = CrashConfig::load()?;
-
-    config.install_geo(force).await?;
-
-    println!("GeoIP databases updated successfully!");
-    Ok(())
-}
-
-/// Handle update command
-async fn handle_update() -> Result<()> {
-    log_info!("Updating configuration from stored URL");
-
-    handle_update_url(false).await
-}
-
-/// Handle ui command
-fn handle_ui(ui: UiType) -> Result<()> {
-    log_info!("Setting UI to: {}", ui);
-
-    let mut config = CrashConfig::load()?;
-    config.web.ui = ui;
-    config.save()?;
-
-    println!("Web UI set to: {}", ui);
-    Ok(())
-}
-
-fn handle_target(target: Target) -> Result<()> {
-    log_info!("Setting target to: {}", target);
-
-    let mut config = CrashConfig::load()?;
-    config.target = target;
-    config.save()?;
-
-    println!("target set to: {}", target);
-    Ok(())
-}
-
-/// Handle host command
-fn handle_host(host: String) -> Result<()> {
-    log_info!("Setting web host to: {}", host);
-
-    let mut config = CrashConfig::load()?;
-
-    config.web.host = host.clone();
-    config.save()?;
-
-    println!("Web host set to: {}", host);
-    Ok(())
-}
-
-/// Handle secret command
-fn handle_secret(secret: String) -> Result<()> {
-    log_info!("Setting web secret");
-
-    let mut config = CrashConfig::load()?;
-
-    config.web.secret = secret;
-    config.save()?;
-
-    println!("Web secret updated successfully!");
-    Ok(())
-}
-
-/// Handle max-runtime command
-fn handle_max_runtime(hours: u64) -> Result<()> {
-    log_info!("Setting max runtime to: {} hours", hours);
-
-    let mut config = CrashConfig::load()?;
-
-    config.max_runtime_hours = hours;
-    config.save()?;
-
-    if hours == 0 {
-        println!("Maximum runtime disabled (process will run indefinitely)");
-    } else {
-        println!("Maximum runtime set to {} hours", hours);
-        println!(
-            "The proxy service will automatically restart after running for {} hours",
-            hours
-        );
-    }
-    Ok(())
-}
-
 async fn handle_upgrade(repo: UpgradeRepo) -> Result<()> {
     log_info!("Executing upgrade command");
 
@@ -411,11 +325,101 @@ async fn handle_upgrade(repo: UpgradeRepo) -> Result<()> {
     Ok(())
 }
 
-fn handle_config() -> Result<()> {
+/// Handle config command and subcommands
+fn handle_config(command: Option<ConfigCommands>) -> Result<()> {
     log_info!("Executing config command");
 
-    let s = std::fs::read_to_string(get_config_path())?;
-    println!("{}", s);
+    match command {
+        None => {
+            // Show all config as JSON
+            let config = CrashConfig::load()?;
+            let json = serde_json::to_string_pretty(&config)?;
+            println!("{}", json);
+        }
+        Some(ConfigCommands::Proxy { value }) => {
+            let mut config = CrashConfig::load()?;
+            match value {
+                Some(proxy) => {
+                    config.proxy = proxy;
+                    config.save()?;
+                    println!("Proxy set to: {}", proxy);
+                }
+                None => {
+                    println!("{}", config.proxy);
+                }
+            }
+        }
+        Some(ConfigCommands::Ui { value }) => {
+            let mut config = CrashConfig::load()?;
+            match value {
+                Some(ui) => {
+                    config.web.ui = ui;
+                    config.save()?;
+                    println!("Web UI set to: {}", ui);
+                }
+                None => {
+                    println!("{}", config.web.ui);
+                }
+            }
+        }
+        Some(ConfigCommands::Target { value }) => {
+            let mut config = CrashConfig::load()?;
+            match value {
+                Some(target) => {
+                    config.target = target;
+                    config.save()?;
+                    println!("Target set to: {}", target);
+                }
+                None => {
+                    println!("{}", config.target);
+                }
+            }
+        }
+        Some(ConfigCommands::Host { value }) => {
+            let mut config = CrashConfig::load()?;
+            match value {
+                Some(host) => {
+                    config.web.host = host.clone();
+                    config.save()?;
+                    println!("Web host set to: {}", host);
+                }
+                None => {
+                    println!("{}", config.web.host);
+                }
+            }
+        }
+        Some(ConfigCommands::Secret { value }) => {
+            let mut config = CrashConfig::load()?;
+            match value {
+                Some(secret) => {
+                    config.web.secret = secret;
+                    config.save()?;
+                    println!("Web secret updated successfully!");
+                }
+                None => {
+                    println!("{}", config.web.secret);
+                }
+            }
+        }
+        Some(ConfigCommands::MaxRuntime { value }) => {
+            let mut config = CrashConfig::load()?;
+            match value {
+                Some(hours) => {
+                    config.max_runtime_hours = hours;
+                    config.save()?;
+                    if hours == 0 {
+                        println!("Maximum runtime disabled (process will run indefinitely)");
+                    } else {
+                        println!("Maximum runtime set to {} hours", hours);
+                    }
+                }
+                None => {
+                    println!("{}", config.max_runtime_hours);
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
