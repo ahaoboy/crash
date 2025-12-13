@@ -281,12 +281,16 @@ async fn handle_run_task() -> Result<()> {
 
 /// Handle update-url command
 async fn handle_update_url(force: bool) -> Result<()> {
-    log_info!("Updating configuration from URL (force: {})", force);
     let config = CrashConfig::load()?;
+    log_info!(
+        "Updating {} configuration from URL (force: {})",
+        config.core,
+        force
+    );
 
     config.update_config(force).await?;
 
-    println!("Configuration updated successfully!");
+    println!("{} configuration updated successfully!", config.core);
     Ok(())
 }
 
