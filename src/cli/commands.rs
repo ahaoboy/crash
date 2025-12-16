@@ -77,9 +77,9 @@ async fn handle_ei(args: Vec<String>) -> Result<()> {
 async fn handle_start(force: bool) -> Result<()> {
     log_info!("Executing start command");
 
-    CrashConfig::load()?.start(force)?;
-
-    println!("Proxy service started successfully!");
+    let mut config = CrashConfig::load()?;
+    config.start(force)?;
+    println!("{} proxy service started successfully!", config.proxy);
 
     handle_status().await?;
     Ok(())
@@ -89,9 +89,10 @@ async fn handle_start(force: bool) -> Result<()> {
 fn handle_stop(force: bool) -> Result<()> {
     log_info!("Executing stop command force: {}", force);
 
-    CrashConfig::load()?.stop(force)?;
+    let mut config = CrashConfig::load()?;
+    config.stop(force)?;
+    println!("{} roxy service stopped successfully!", config.proxy);
 
-    println!("Proxy service stopped successfully!");
     Ok(())
 }
 
