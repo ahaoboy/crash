@@ -79,7 +79,7 @@ async fn handle_start(force: bool) -> Result<()> {
 
     let mut config = CrashConfig::load()?;
     config.start(force)?;
-    println!("{} proxy service started successfully!", config.proxy);
+    println!("{} proxy service started successfully!", config.core);
 
     handle_status().await?;
     Ok(())
@@ -91,7 +91,7 @@ fn handle_stop(force: bool) -> Result<()> {
 
     let mut config = CrashConfig::load()?;
     config.stop(force)?;
-    println!("{} proxy service stopped successfully!", config.proxy);
+    println!("{} proxy service stopped successfully!", config.core);
 
     Ok(())
 }
