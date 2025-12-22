@@ -76,15 +76,16 @@ impl CrashConfig {
                 ))
             })?;
 
-            serde_json::from_str(&data)
-                .map_err(|e| CrashError::Config(format!("Failed to parse config file: {}", e)))?
+            let config: CrashConfig = serde_json::from_str(&data)
+                .map_err(|e| CrashError::Config(format!("Failed to parse config file: {}", e)))?;
+            config.validate()?;
+            config
         } else {
             log_info!("Config file not found, creating default configuration");
-            Self::default()
+            let config = Self::default();
+            config.save()?;
+            config
         };
-
-        config.validate()?;
-        config.save()?;
 
         Ok(config)
     }
