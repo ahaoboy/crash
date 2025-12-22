@@ -91,7 +91,7 @@ fn handle_stop(force: bool) -> Result<()> {
 
     let mut config = CrashConfig::load()?;
     config.stop(force)?;
-    println!("{} roxy service stopped successfully!", config.proxy);
+    println!("{} proxy service stopped successfully!", config.proxy);
 
     Ok(())
 }
