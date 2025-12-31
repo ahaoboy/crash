@@ -8,7 +8,9 @@ use crate::utils::download::download_text;
 use crate::utils::fs::{atomic_write, ensure_dir};
 use crate::utils::process::get_pid;
 use crate::utils::process::{start, stop};
-use crate::utils::{current_timestamp, file_exists, get_dir_size, is_url, strip_suffix};
+use crate::utils::{
+    check_google, current_timestamp, file_exists, get_dir_size, is_url, strip_suffix,
+};
 use crate::{log_debug, log_info};
 use easy_install::{InstallConfig, ei};
 use github_proxy::{Proxy, Resource};
@@ -132,7 +134,7 @@ impl CrashConfig {
         get_config_dir().join(self.core.config_file_name())
     }
 
-    pub fn start(&mut self, force: bool) -> Result<()> {
+    pub async fn start(&mut self, force: bool) -> Result<()> {
         log_info!("Starting proxy core: {}", self.core.name());
 
         if self.stop_force {
@@ -146,6 +148,40 @@ impl CrashConfig {
             }
         }
 
+        if get_pid(&self.core.exe_name()).is_ok() {
+            let current_time = current_timestamp();
+            let runtime_seconds = current_time.saturating_sub(self.start_time);
+            let max_runtime_seconds = self.max_runtime_hours * 3600;
+            let stop_reason = if force {
+                Some("manual force stop")
+            } else if self.max_runtime_hours > 0
+                && self.start_time > 0
+                && runtime_seconds >= max_runtime_seconds
+            {
+                Some("maximum runtime exceeded")
+            } else if !check_google().await {
+                Some("google connectivity check failed")
+            } else {
+                None
+            };
+
+            if let Some(reason) = stop_reason {
+                log_info!("Stopping process, reason: {}", reason);
+                self.stop(false)?;
+            } else {
+                return Ok(());
+            }
+        }
+
+        self.start_core()?;
+        self.start_time = current_timestamp();
+        self.save()?;
+
+        log_info!("Proxy core started successfully");
+        Ok(())
+    }
+
+    pub fn start_core(&self) -> Result<()> {
         let exe_path = self.core.exe_path(&get_config_dir());
 
         if !exe_path.exists() {
@@ -153,35 +189,6 @@ impl CrashConfig {
                 "Core executable not found: {}. Please run 'install' first.",
                 exe_path.display()
             )));
-        }
-
-        if get_pid(&self.core.exe_name()).is_ok() {
-            log_info!("Skip starting proxy core: {}", self.core.name());
-
-            // Check if max runtime has been exceeded
-            if self.max_runtime_hours > 0 && self.start_time > 0 {
-                let current_time = current_timestamp();
-                let runtime_seconds = current_time.saturating_sub(self.start_time);
-                let max_runtime_seconds = self.max_runtime_hours * 3600;
-
-                if runtime_seconds >= max_runtime_seconds {
-                    log_info!(
-                        "Process has been running for {} hours, exceeding max runtime of {} hours. Restarting...",
-                        runtime_seconds / 3600,
-                        self.max_runtime_hours
-                    );
-                    self.stop(false)?;
-                    // Continue to start the process below
-                } else if force {
-                    self.stop(false)?;
-                } else {
-                    return Ok(());
-                }
-            } else if force {
-                self.stop(false)?;
-            } else {
-                return Ok(());
-            }
         }
 
         let args = match self.core {
@@ -207,14 +214,8 @@ impl CrashConfig {
         };
 
         start(&exe_path, args, self.core.envs())?;
-
-        self.start_time = current_timestamp();
-        self.save()?;
-
-        log_info!("Proxy core started successfully");
         Ok(())
     }
-
     /// Stop the proxy core
     pub fn stop(&mut self, force: bool) -> Result<()> {
         log_info!("Stopping proxy core: {}", self.core.name());

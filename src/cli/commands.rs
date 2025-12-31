@@ -78,7 +78,7 @@ async fn handle_start(force: bool) -> Result<()> {
     log_info!("Executing start command");
 
     let mut config = CrashConfig::load()?;
-    config.start(force)?;
+    config.start(force).await?;
     println!("{} proxy service started successfully!", config.core);
 
     handle_status().await?;

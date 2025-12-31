@@ -13,6 +13,13 @@ pub use time::{current_timestamp, format_uptime};
 
 use crate::utils::command::execute;
 
+pub async fn check_google() -> bool {
+    if let Ok(response) = reqwest::get("https://www.google.com").await {
+        return response.status().is_success();
+    }
+    false
+}
+
 pub fn get_user() -> String {
     if let Ok(v) = std::env::var("USER") {
         return v;
