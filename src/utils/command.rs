@@ -4,8 +4,6 @@ use crate::{
     error::{CrashError, Result},
     log_info,
 };
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
 use std::process::{Command, Stdio};
 
 /// Execute a command synchronously and return its output
@@ -16,15 +14,17 @@ pub fn execute(cmd: &str, args: &[&str]) -> Result<String> {
         .stdin(Stdio::null())
         .stderr(Stdio::piped())
         .stdout(Stdio::piped());
-    let output = c
-        .output()
-        .map_err(|e| CrashError::Platform(format!("Failed to execute command '{}': {}", cmd, e)))?;
 
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         c.creation_flags(CREATE_NO_WINDOW);
     }
+
+    let output = c
+        .output()
+        .map_err(|e| CrashError::Platform(format!("Failed to execute command '{}': {}", cmd, e)))?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())

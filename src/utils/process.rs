@@ -179,20 +179,8 @@ pub fn kill_process(name_or_path: &str) -> Result<()> {
         .and_then(|n| n.to_str())
         .unwrap_or(name_or_path);
 
-    let output = Command::new("taskkill")
-        .args(["/F", "/IM", process_name])
-        .output()
-        .map_err(|e| CrashError::Process(format!("Failed to execute taskkill: {}", e)))?;
-
-    if output.status.success() {
-        Ok(())
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(CrashError::Process(format!(
-            "Failed to kill process '{}': {}",
-            process_name, stderr
-        )))
-    }
+    execute("cmd", &["/F", "/IM", process_name])?;
+    Ok(())
 }
 
 pub fn is_running(name: &str) -> bool {
