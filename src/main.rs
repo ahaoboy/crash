@@ -15,12 +15,11 @@ use crash::{log_error, log_info};
 
 #[cfg(windows)]
 fn attach_console() {
-    use windows_sys::Win32::System::Console::{
-        AttachConsole, GetStdHandle,
-        SetStdHandle, ATTACH_PARENT_PROCESS,
-        STD_OUTPUT_HANDLE, STD_ERROR_HANDLE,
-    };
     use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
+    use windows_sys::Win32::System::Console::{
+        ATTACH_PARENT_PROCESS, AttachConsole, GetStdHandle, STD_ERROR_HANDLE, STD_OUTPUT_HANDLE,
+        SetStdHandle,
+    };
 
     unsafe {
         if AttachConsole(ATTACH_PARENT_PROCESS) == 0 {
@@ -40,9 +39,6 @@ fn attach_console() {
 
 #[tokio::main]
 async fn main() {
-    #[cfg(windows)]
-    attach_console();
-
     // Initialize logging system
     if let Err(e) = init_logging() {
         eprintln!("Failed to initialize logging: {}", e);
@@ -71,6 +67,13 @@ fn init_logging() -> Result<()> {
 
 /// Main application logic
 async fn run() -> Result<()> {
+    #[cfg(windows)]
+    {
+        if std::env::args().find(|i| i == "--schedule").is_none() {
+            attach_console();
+        }
+    }
+
     let cli = Cli::parse();
 
     log_info!("Parsed CLI arguments");

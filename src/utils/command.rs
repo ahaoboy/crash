@@ -7,13 +7,14 @@ use crate::{
 use std::process::{Command, Stdio};
 
 /// Execute a command synchronously and return its output
-pub fn execute(cmd: &str, args: &[&str]) -> Result<String> {
+pub fn execute(cmd: &str, args: &[&str], envs: Option<Vec<(&str, &str)>>) -> Result<String> {
     log_info!("execute {} {}", cmd, args.join(" "));
     let mut c = Command::new(cmd);
-    c.args(args)
-        .stdin(Stdio::null())
-        .stderr(Stdio::piped())
-        .stdout(Stdio::piped());
+    c.args(args);
+
+    if let Some(envs) = envs {
+        c.envs(envs);
+    }
 
     #[cfg(target_os = "windows")]
     {
@@ -21,6 +22,10 @@ pub fn execute(cmd: &str, args: &[&str]) -> Result<String> {
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         c.creation_flags(CREATE_NO_WINDOW);
     }
+
+    c.stdin(Stdio::null())
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped());
 
     let output = c
         .output()
@@ -35,17 +40,4 @@ pub fn execute(cmd: &str, args: &[&str]) -> Result<String> {
             cmd, output.status, stderr
         )))
     }
-}
-
-/// Execute a command asynchronously (spawn and detach)
-pub fn execute_async(cmd: &str, args: &[&str]) -> Result<()> {
-    Command::new(cmd)
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|e| CrashError::Platform(format!("Failed to spawn command '{}': {}", cmd, e)))?;
-
-    Ok(())
 }

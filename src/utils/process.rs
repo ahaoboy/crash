@@ -4,8 +4,9 @@ use crate::error::{CrashError, Result};
 use crate::{log_debug, log_error, log_info};
 use std::path::Path;
 use std::process::{Command, Stdio};
+
 /// Start a process with the given executable path and arguments
-pub fn start(exe_path: &Path, args: Vec<String>, env: Vec<(&str, &str)>) -> Result<()> {
+pub fn start(exe_path: &Path, args: Vec<String>, envs: Vec<(&str, &str)>) -> Result<()> {
     log_info!(
         "Starting process: {} with args: {:?}",
         exe_path.display(),
@@ -19,10 +20,18 @@ pub fn start(exe_path: &Path, args: Vec<String>, env: Vec<(&str, &str)>) -> Resu
         )));
     }
 
-    Command::new(exe_path)
-        .args(&args)
-        .envs(env)
-        .stdin(Stdio::null())
+    let mut c = Command::new(exe_path);
+
+    c.args(&args).envs(envs);
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        c.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    c.stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
@@ -153,6 +162,7 @@ pub fn get_pid(name: &str) -> Result<u32> {
             "/FO",
             "CSV",
         ],
+        None,
     )?;
 
     for line in output.lines() {
@@ -179,7 +189,7 @@ pub fn kill_process(name_or_path: &str) -> Result<()> {
         .and_then(|n| n.to_str())
         .unwrap_or(name_or_path);
 
-    execute("cmd", &["/F", "/IM", process_name])?;
+    execute("cmd", &["/F", "/IM", process_name], None)?;
     Ok(())
 }
 

@@ -21,6 +21,9 @@ const VERSION: &str = const_str::concat!(CARGO_PKG_VERSION, " ", GIT_HASH);
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
+
+    #[arg(long, default_value_t = false)]
+    pub schedule: bool,
 }
 
 #[derive(

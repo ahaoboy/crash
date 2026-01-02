@@ -44,6 +44,7 @@ pub fn get_memory_usage(pid: u32) -> Result<u64> {
     let output = execute(
         "tasklist",
         &["/FI", &format!("PID eq {}", pid), "/NH", "/FO", "CSV"],
+        None
     )?;
 
     for line in output.lines() {
