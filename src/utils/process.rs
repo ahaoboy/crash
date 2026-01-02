@@ -188,7 +188,7 @@ pub fn kill_process(name_or_path: &str) -> Result<()> {
         .and_then(|n| n.to_str())
         .unwrap_or(name_or_path);
 
-    execute("cmd", &["/F", "/IM", process_name],  )?;
+    execute("taskkill", &["/F", "/IM", process_name],  )?;
     Ok(())
 }
 
