@@ -95,7 +95,7 @@ async fn handle_stop(force: bool) -> Result<()> {
     println!("{} proxy service stopped successfully!", config.core);
 
     // wait stop complete
-    std::thread::sleep(Duration::from_secs(1));
+    std::thread::sleep(Duration::from_secs_f32(0.1));
     handle_status().await?;
 
     Ok(())
