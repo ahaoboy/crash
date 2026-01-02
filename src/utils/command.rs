@@ -7,14 +7,10 @@ use crate::{
 use std::process::{Command, Stdio};
 
 /// Execute a command synchronously and return its output
-pub fn execute(cmd: &str, args: &[&str], envs: Option<Vec<(&str, &str)>>) -> Result<String> {
+pub fn execute(cmd: &str, args: &[&str],  ) -> Result<String> {
     log_info!("execute {} {}", cmd, args.join(" "));
     let mut c = Command::new(cmd);
     c.args(args);
-
-    if let Some(envs) = envs {
-        c.envs(envs);
-    }
 
     #[cfg(target_os = "windows")]
     {

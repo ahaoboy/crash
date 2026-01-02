@@ -25,7 +25,7 @@ pub fn get_user() -> String {
         return v;
     }
 
-    if let Ok(v) = execute("whoami", &[],None) {
+    if let Ok(v) = execute("whoami", &[], ) {
         return v;
     }
 

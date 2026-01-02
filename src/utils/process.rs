@@ -162,7 +162,6 @@ pub fn get_pid(name: &str) -> Result<u32> {
             "/FO",
             "CSV",
         ],
-        None,
     )?;
 
     for line in output.lines() {
@@ -189,7 +188,7 @@ pub fn kill_process(name_or_path: &str) -> Result<()> {
         .and_then(|n| n.to_str())
         .unwrap_or(name_or_path);
 
-    execute("cmd", &["/F", "/IM", process_name], None)?;
+    execute("cmd", &["/F", "/IM", process_name],  )?;
     Ok(())
 }
 
