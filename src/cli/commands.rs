@@ -10,6 +10,7 @@ use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use clap_complete::{Shell, generate};
 use std::io;
+use std::time::Duration;
 
 pub async fn handle(command: Option<Commands>) -> Result<()> {
     match command {
@@ -93,6 +94,8 @@ async fn handle_stop(force: bool) -> Result<()> {
     config.stop(force)?;
     println!("{} proxy service stopped successfully!", config.core);
 
+    // wait stop complete
+    std::thread::sleep(Duration::from_secs(1));
     handle_status().await?;
 
     Ok(())
