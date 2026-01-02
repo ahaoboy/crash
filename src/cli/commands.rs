@@ -15,7 +15,7 @@ pub async fn handle(command: Option<Commands>) -> Result<()> {
     match command {
         Some(Commands::Install { force, command }) => handle_install(force, command).await,
         Some(Commands::Start { force }) => handle_start(force).await,
-        Some(Commands::Stop { force }) => handle_stop(force),
+        Some(Commands::Stop { force }) => handle_stop(force).await,
         Some(Commands::Status) => handle_status().await,
         Some(Commands::RunTask) => handle_run_task().await,
         Some(Commands::RemoveTask) => handle_remove_task(),
@@ -86,12 +86,14 @@ async fn handle_start(force: bool) -> Result<()> {
 }
 
 /// Handle stop command
-fn handle_stop(force: bool) -> Result<()> {
+async fn handle_stop(force: bool) -> Result<()> {
     log_info!("Executing stop command force: {}", force);
 
     let mut config = CrashConfig::load()?;
     config.stop(force)?;
     println!("{} proxy service stopped successfully!", config.core);
+
+    handle_status().await?;
 
     Ok(())
 }
