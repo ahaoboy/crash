@@ -84,7 +84,7 @@ pub enum ConfigCommands {
     },
     /// Get or set the web UI type
     Ui {
-        /// UI type (Metacubexd, Zashboard, Yacd), omit to show current value
+        /// UI type (Metacubexd, Yacd), omit to show current value
         #[arg(ignore_case = true)]
         value: Option<UiType>,
     },

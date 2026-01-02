@@ -7,7 +7,7 @@ A Rust-based proxy core management tool supporting Clash/Mihomo/SingBox and othe
 - 🚀 Cross-platform support (Linux, macOS, Windows, Android)
 - 📦 Automatic download and installation of proxy cores
 - 🔄 Automatic configuration and GeoIP database updates
-- 🌐 Multiple Web UI support (Metacubexd, Zashboard, Yacd)
+- 🌐 Multiple Web UI support (Metacubexd, Yacd)
 - ⏰ Scheduled task support (automatic config and database updates)
 - 🔧 Flexible configuration management
 - 🪞 Multiple GitHub mirror support for accelerated downloads
@@ -141,7 +141,7 @@ crash config proxy gh-proxy     # Set proxy (direct, gh-proxy, xget, jsdelivr, e
 
 # Web UI type
 crash config ui                 # Show current UI
-crash config ui metacubexd      # Set UI (metacubexd, zashboard, yacd)
+crash config ui metacubexd      # Set UI (metacubexd, yacd)
 # Web controller host
 crash config host               # Show current host
 crash config host :9090         # Set host

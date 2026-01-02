@@ -25,7 +25,6 @@ use strum::{Display, EnumString, IntoStaticStr};
 pub enum UiType {
     #[default]
     Metacubexd,
-    Zashboard,
     Yacd,
 }
 
@@ -63,7 +62,6 @@ impl WebConfig {
         use UiType::*;
         match self.ui {
             Yacd => "yacd.tar.gz".to_string(),
-            Zashboard => "zashboard.tar.gz".to_string(),
             Metacubexd => "metacubexd.tar.gz".to_string(),
         }
     }
