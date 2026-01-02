@@ -45,9 +45,15 @@ humantime = "2"
 which = "8"
 fs4 = "0.13"
 git-version = "0.3"
-const-str = "0.7"
+const-str = "1"
 public-ip-address = { version = "0.4", default-features = false, features = [
   "rustls-tls",
+] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_System_Console",
+    "Win32_Foundation"
 ] }
 
 [profile.release]
