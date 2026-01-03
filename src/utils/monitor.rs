@@ -138,7 +138,8 @@ pub async fn format_status(config: &CrashConfig) -> String {
 
     lines.push(("status", status_text));
     lines.push(("proxy", config.proxy.to_string()));
-    lines.push(("user", get_user()));
+    let user_prefix = if is_admin::is_admin() { "#" } else { "$" };
+    lines.push(("user", format!("{}{}", user_prefix, get_user())));
     lines.push((
         "config",
         format!(

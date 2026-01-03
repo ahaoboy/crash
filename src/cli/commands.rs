@@ -180,7 +180,7 @@ fn handle_task() -> Result<()> {
     ];
 
     for (name, subcmd, schedule, days, time) in tasks {
-        if execute("schtasks", &["/query", "/tn", name],  )
+        if execute("schtasks", &["/query", "/tn", name]  )
             .unwrap_or_default()
             .contains(name)
         {
@@ -203,7 +203,7 @@ fn handle_task() -> Result<()> {
 
         args.extend_from_slice(&["/rl", "LIMITED"]);
 
-        if execute("schtasks", &args,  ).is_ok() {
+        if execute("schtasks", &args  ).is_ok() {
             println!("Scheduled task '{}' created successfully.", name);
         } else {
             println!("Scheduled task '{}' created error.", name);
@@ -217,7 +217,7 @@ fn handle_task() -> Result<()> {
 fn handle_remove_task() -> Result<()> {
     println!("Removing Windows scheduled task");
     for name in ["CrashRunTask", "CrashStart"] {
-        let status = execute("schtasks", &["/delete", "/tn", name, "/f"],  );
+        let status = execute("schtasks", &["/delete", "/tn", name, "/f"] );
         if status.is_ok() {
             println!("Task '{}' deleted successfully.", name);
         } else {

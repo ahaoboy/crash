@@ -246,7 +246,7 @@ impl CrashConfig {
             Core::Mihomo | Core::Clash => &["-v"],
             Core::Singbox => &["version"],
         };
-        let output = execute(exe_path.to_string_lossy().as_ref(), args, )?;
+        let output = execute(exe_path.to_string_lossy().as_ref(), args)?;
 
         // Parse version from output (format: "Mihomo version 1.19.15")
         let Some(version) = output.split_whitespace().nth(2).map(|s| s.to_string()) else {

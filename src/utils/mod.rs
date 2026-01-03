@@ -25,11 +25,11 @@ pub fn get_user() -> String {
         return v;
     }
 
-    if let Ok(v) = execute("whoami", &[], ) {
+    if let Ok(v) = execute("whoami", &[]) {
         return v;
     }
 
-    "root".to_string()
+    "UNKNOWN".to_string()
 }
 
 pub fn get_dir_size(path: &Path) -> u64 {
