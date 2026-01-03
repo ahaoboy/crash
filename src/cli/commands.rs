@@ -82,7 +82,9 @@ async fn handle_start(force: bool) -> Result<()> {
     config.start(force).await?;
     println!("{} proxy service started successfully!", config.core);
 
+    std::thread::sleep(Duration::from_secs_f32(0.1));
     handle_status().await?;
+
     Ok(())
 }
 
@@ -94,7 +96,6 @@ async fn handle_stop(force: bool) -> Result<()> {
     config.stop(force)?;
     println!("{} proxy service stopped successfully!", config.core);
 
-    // wait stop complete
     std::thread::sleep(Duration::from_secs_f32(0.1));
     handle_status().await?;
 
