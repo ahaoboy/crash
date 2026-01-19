@@ -4,14 +4,23 @@ use crate::error::{CrashError, Result};
 use crate::{log_debug, log_error, log_info, log_warn};
 use reqwest::Client;
 use std::path::Path;
+use std::sync::OnceLock;
 use std::time::Duration;
 
-fn new_client() -> Client {
-    Client::builder()
-        .timeout(Duration::from_secs(600))
-        .build()
-        .unwrap_or_else(|_| Client::new())
+fn new_client() -> &'static Client {
+    static CLIENT: OnceLock<Client> = OnceLock::new();
+    let timeout = Duration::from_secs(600);
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(timeout)
+            .connect_timeout(timeout)
+            .tcp_keepalive(timeout)
+            .cookie_store(true)
+            .build()
+            .expect("Failed to create HTTP client")
+    })
 }
+
 const INITIAL_DELAY_MS: u64 = 1000; // 1 second
 const MAX_DELAY_MS: u64 = 30000; // 30 seconds
 const MAX_RETRIES: u32 = 3;
