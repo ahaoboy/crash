@@ -57,6 +57,26 @@ impl WebConfig {
         config_dir.join(self.ui_name())
     }
 
+    /// Get the UI version if available
+    pub fn ui_version(&self, config_dir: &Path) -> Option<String> {
+        let index_html = self.ui_dir(config_dir).join("index.html");
+        let content = std::fs::read_to_string(index_html).ok()?;
+
+        match self.ui {
+            UiType::Metacubexd => {
+                let start_pattern = "appVersion:\"";
+                if let Some(start) = content.find(start_pattern) {
+                    let start = start + start_pattern.len();
+                    if let Some(end) = content[start..].find('"') {
+                        return Some(content[start..start + end].to_string());
+                    }
+                }
+            }
+            UiType::Yacd => {}
+        }
+        None
+    }
+
     /// Get the release file name for the UI
     fn ui_release_file_name(&self) -> String {
         use UiType::*;

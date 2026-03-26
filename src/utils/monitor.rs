@@ -115,7 +115,13 @@ pub async fn format_status(config: &CrashConfig) -> String {
     if let Ok(ip) = local_ip_address::local_ip() {
         let port = config.web.host.split(':').nth(1).unwrap_or("9090");
         let ui_name = config.web.ui_name();
-        lines.push(("webui", format!("{} (http://{}:{}/ui)", ui_name, ip, port)));
+        
+        let mut version_str = String::new();
+        if let Some(version) = config.web.ui_version(&get_config_dir()) {
+            version_str = format!(" {}", version);
+        }
+        
+        lines.push(("webui", format!("{}{version_str} (http://{}:{}/ui)", ui_name, ip, port)));
     }
 
     // Status and uptime
