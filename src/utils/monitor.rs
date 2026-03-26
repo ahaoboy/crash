@@ -146,14 +146,15 @@ pub async fn format_status(config: &CrashConfig) -> String {
     lines.push(("proxy", config.proxy.to_string()));
     let user_prefix = if is_admin::is_admin() { "#" } else { "$" };
     lines.push(("user", format!("{}{}", user_prefix, get_user())));
+    let config_dir = get_config_dir();
     lines.push((
         "config",
         format!(
-            "{} ({} / {})",
-            // config.config_dir.to_string_lossy(),
-            get_config_dir().to_string_lossy(),
-            format_size(config.get_size(),),
-            format_size(fs4::total_space(get_config_dir()).unwrap_or(0))
+            "{} (used: {} | free: {} | total: {})",
+            config_dir.to_string_lossy(),
+            format_size(config.get_size()),
+            format_size(fs4::available_space(&config_dir).unwrap_or(0)),
+            format_size(fs4::total_space(&config_dir).unwrap_or(0))
         ),
     ));
 
