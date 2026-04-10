@@ -100,7 +100,9 @@ pub async fn format_status(config: &CrashConfig) -> String {
     }
 
     // IP
-    if let Ok(response) = perform_lookup(None).await {
+    if let Ok(Ok(response)) =
+        tokio::time::timeout(Duration::from_secs(5), perform_lookup(None)).await
+    {
         let ip = response.ip;
         let s = match (response.country_code, response.city) {
             (Some(country), Some(city)) => format!("{} ({}-{})", ip, country, city),
