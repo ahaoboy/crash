@@ -100,18 +100,19 @@ pub async fn format_status(config: &CrashConfig) -> String {
     }
 
     // IP
-    if let Ok(Ok(response)) =
+    let ip_str = if let Ok(Ok(response)) =
         tokio::time::timeout(Duration::from_secs(5), perform_lookup(None)).await
     {
         let ip = response.ip;
-        let s = match (response.country_code, response.city) {
+        match (response.country_code, response.city) {
             (Some(country), Some(city)) => format!("{} ({}-{})", ip, country, city),
             (Some(country), None) => format!("{} ({})", ip, country),
             _ => format!("{}", ip),
-        };
-
-        lines.push(("ip", s));
+        }
+    } else {
+        "Unknown".to_string()
     };
+    lines.push(("ip", ip_str));
 
     // Web UI info
     if let Ok(ip) = local_ip_address::local_ip() {
@@ -123,7 +124,10 @@ pub async fn format_status(config: &CrashConfig) -> String {
             version_str = format!(" {}", version);
         }
 
-        lines.push(("webui", format!("{}{version_str} (http://{}:{}/ui)", ui_name, ip, port)));
+        lines.push((
+            "webui",
+            format!("{}{version_str} (http://{}:{}/ui)", ui_name, ip, port),
+        ));
     }
 
     // Status and uptime
