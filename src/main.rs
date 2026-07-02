@@ -6,10 +6,10 @@
 //     windows_subsystem = "windows"
 // )]
 
-use anyhow::Result;
 use clap::Parser;
 use crash::cli::Cli;
 use crash::cli::commands::handle;
+use crash::error::Result;
 use crash::log::{LogConfig, init_logger};
 use crash::{log_error, log_info};
 
@@ -37,7 +37,7 @@ fn attach_console() {
     }
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     // Initialize logging system
     if let Err(e) = init_logging() {

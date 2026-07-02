@@ -222,9 +222,14 @@ crash ei ilai-deutel/kibi --proxy gh-proxy
 
 ## Configuration File
 
-Configuration file location:
-- Linux/macOS: `~/.crash/config.json`
-- Windows: `%USERPROFILE%\.crash\config.json`
+Configuration is stored next to the `crash` executable, in a portable
+`crash_config/` subdirectory:
+
+- `<crash_dir>/crash_config/crash_config.json`
+
+Where `<crash_dir>` is the directory containing the `crash` binary (the
+parent of `crash` / `crash.exe`). This makes an installation self-contained
+and portable.
 
 Example configuration:
 
@@ -268,11 +273,15 @@ After installing scheduled tasks, the system will automatically:
 
 ## Logging
 
-Log files location:
-- Linux/macOS: `~/.crash/logs/`
-- Windows: `%USERPROFILE%\.crash\logs\`
+Log files are written next to the `crash` executable, in:
 
-Logs are automatically rotated, keeping the last 5 files with a maximum size of 10MB each.
+- `<crash_dir>/crash_config/logs/crash.log` (current)
+- `<crash_dir>/crash_config/logs/crash.log.1` … `crash.log.5` (rotated backups)
+
+When `crash.log` reaches 1 MB it is rotated: `crash.log` → `crash.log.1` →
+… → `crash.log.5` (the oldest is dropped). At most 6 files (~6 MB) are
+kept, so log storage is bounded — important on flash-constrained devices
+like routers. Timestamps are RFC 3339 UTC.
 
 ## Development
 

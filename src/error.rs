@@ -45,6 +45,12 @@ pub enum CrashError {
     /// UTF-8 conversion errors
     #[error("UTF-8 error: {0}")]
     Utf8(#[from] std::string::FromUtf8Error),
+
+    /// Errors from external crates that don't have a dedicated variant,
+    /// e.g. `easy_install`. The concrete type is stringified so we don't
+    /// leak third-party error types across the crate boundary.
+    #[error("External error: {0}")]
+    External(String),
 }
 
 /// Result type alias for convenience

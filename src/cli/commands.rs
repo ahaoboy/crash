@@ -2,11 +2,10 @@
 
 use crate::cli::{Cli, Commands, ConfigCommands, InstallCommands, UpgradeRepo};
 use crate::config::CrashConfig;
-use crate::error::CrashError;
+use crate::error::{CrashError, Result};
 use crate::log_info;
 use crate::utils::command::execute;
 use crate::utils::monitor::format_status;
-use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use clap_complete::{Shell, generate};
 use std::io;
@@ -71,7 +70,9 @@ async fn handle_ei(args: Vec<String>) -> Result<()> {
     log_info!("Executing ei command (args: {:?})", args);
     let mut v = vec!["ei".to_string()];
     v.extend(args);
-    easy_install::run_main(easy_install::Args::parse_from(v)).await
+    easy_install::run_main(easy_install::Args::parse_from(v))
+        .await
+        .map_err(|e| CrashError::External(e.to_string()))
 }
 
 /// Handle start command
@@ -82,7 +83,7 @@ async fn handle_start(force: bool) -> Result<()> {
     config.start(force).await?;
     println!("{} proxy service started successfully!", config.core);
 
-    std::thread::sleep(Duration::from_secs_f32(0.1));
+    tokio::time::sleep(Duration::from_secs_f32(0.1)).await;
     handle_status().await?;
 
     Ok(())
@@ -96,7 +97,7 @@ async fn handle_stop(force: bool) -> Result<()> {
     config.stop(force)?;
     println!("{} proxy service stopped successfully!", config.core);
 
-    std::thread::sleep(Duration::from_secs_f32(0.1));
+    tokio::time::sleep(Duration::from_secs_f32(0.1)).await;
     handle_status().await?;
 
     Ok(())
@@ -110,6 +111,10 @@ async fn handle_status() -> Result<()> {
     println!("{}", status);
     Ok(())
 }
+
+/// Cron schedule entries installed on Unix systems: (cron expression, crash subcommand).
+#[cfg(unix)]
+const UNIX_SCHEDULES: [(&str, &str); 2] = [("0 3 * * 3", "run-task"), ("*/10 * * * *", "start")];
 
 #[cfg(unix)]
 fn handle_task() -> Result<()> {
@@ -126,7 +131,7 @@ fn handle_task() -> Result<()> {
     let exe_path = exe.to_string_lossy();
 
     if which("crontab").is_err() {
-        return Err(CrashError::Platform("crontab not found".to_string()).into());
+        return Err(CrashError::Platform("crontab not found".to_string()));
     }
 
     let user = get_user();
@@ -144,7 +149,7 @@ fn handle_task() -> Result<()> {
         }
     }
 
-    for (cron, subcmd) in [("0 3 * * 3", "run-task"), ("*/10 * * * *", "start")] {
+    for (cron, subcmd) in UNIX_SCHEDULES {
         let cmd = format!("{} {}", exe_path, subcmd);
         let entry = format!("{} {}", cron, cmd);
 
@@ -175,12 +180,18 @@ fn handle_task() -> Result<()> {
     let exe_path = exe.to_string_lossy();
 
     let tasks = [
-    ("CrashRunTask", "--schedule run-task", "WEEKLY", "WED", "03:00"),
+        (
+            "CrashRunTask",
+            "--schedule run-task",
+            "WEEKLY",
+            "WED",
+            "03:00",
+        ),
         ("CrashStart", "--schedule start", "MINUTE", "", "00:00"),
     ];
 
     for (name, subcmd, schedule, days, time) in tasks {
-        if execute("schtasks", &["/query", "/tn", name]  )
+        if execute("schtasks", &["/query", "/tn", name])
             .unwrap_or_default()
             .contains(name)
         {
@@ -203,7 +214,7 @@ fn handle_task() -> Result<()> {
 
         args.extend_from_slice(&["/rl", "LIMITED"]);
 
-        if execute("schtasks", &args  ).is_ok() {
+        if execute("schtasks", &args).is_ok() {
             println!("Scheduled task '{}' created successfully.", name);
         } else {
             println!("Scheduled task '{}' created error.", name);
@@ -217,7 +228,7 @@ fn handle_task() -> Result<()> {
 fn handle_remove_task() -> Result<()> {
     println!("Removing Windows scheduled task");
     for name in ["CrashRunTask", "CrashStart"] {
-        let status = execute("schtasks", &["/delete", "/tn", name, "/f"] );
+        let status = execute("schtasks", &["/delete", "/tn", name, "/f"]);
         if status.is_ok() {
             println!("Task '{}' deleted successfully.", name);
         } else {
@@ -240,7 +251,7 @@ pub fn handle_remove_task() -> Result<()> {
 
     let exe_path = exe.to_string_lossy();
 
-    for (cron, subcmd) in [("0 3 * * 3", "run-task"), ("*/10 * * * *", "start")] {
+    for (cron, subcmd) in UNIX_SCHEDULES {
         let cmd = format!("{} {}", exe_path, subcmd);
         let entry = format!("{} {}", cron, cmd);
 
@@ -310,112 +321,80 @@ async fn handle_upgrade(repo: UpgradeRepo) -> Result<()> {
     Ok(())
 }
 
+/// Load the config, apply a mutation, save it, and print the message returned
+/// by the closure. Centralises the load/save/print boilerplate that every
+/// `config <field> <value>` subcommand would otherwise repeat.
+fn mutate_config<F: FnOnce(&mut CrashConfig) -> String>(f: F) -> Result<()> {
+    let mut config = CrashConfig::load()?;
+    let msg = f(&mut config);
+    config.save()?;
+    println!("{}", msg);
+    Ok(())
+}
+
 /// Handle config command and subcommands
 fn handle_config(command: Option<ConfigCommands>) -> Result<()> {
     log_info!("Executing config command");
 
     match command {
         None => {
-            // Show all config as JSON
             let config = CrashConfig::load()?;
             let json = serde_json::to_string_pretty(&config)?;
             println!("{}", json);
         }
-        Some(ConfigCommands::Url { value }) => {
-            let mut config = CrashConfig::load()?;
-            match value {
-                Some(url) => {
-                    config.url = url.clone();
-                    config.save()?;
-                    println!("Configuration URL set to: {}", url);
+        Some(ConfigCommands::Url { value }) => match value {
+            Some(url) => mutate_config(|c| {
+                c.url = url;
+                format!("Configuration URL set to: {}", c.url)
+            })?,
+            None => println!("{}", CrashConfig::load()?.url),
+        },
+        Some(ConfigCommands::Proxy { value }) => match value {
+            Some(proxy) => mutate_config(|c| {
+                c.proxy = proxy;
+                format!("Proxy set to: {}", c.proxy)
+            })?,
+            None => println!("{}", CrashConfig::load()?.proxy),
+        },
+        Some(ConfigCommands::Ui { value }) => match value {
+            Some(ui) => mutate_config(|c| {
+                c.web.ui = ui;
+                format!("Web UI set to: {}", c.web.ui)
+            })?,
+            None => println!("{}", CrashConfig::load()?.web.ui),
+        },
+        Some(ConfigCommands::Target { value }) => match value {
+            Some(target) => mutate_config(|c| {
+                c.target = target;
+                format!("Target set to: {}", c.target)
+            })?,
+            None => println!("{}", CrashConfig::load()?.target),
+        },
+        Some(ConfigCommands::Host { value }) => match value {
+            Some(host) => mutate_config(|c| {
+                c.web.host = host;
+                format!("Web host set to: {}", c.web.host)
+            })?,
+            None => println!("{}", CrashConfig::load()?.web.host),
+        },
+        Some(ConfigCommands::Secret { value }) => match value {
+            Some(secret) => mutate_config(|c| {
+                c.web.secret = secret;
+                "Web secret updated successfully!".to_string()
+            })?,
+            None => println!("{}", CrashConfig::load()?.web.secret),
+        },
+        Some(ConfigCommands::MaxRuntime { value }) => match value {
+            Some(hours) => mutate_config(|c| {
+                c.max_runtime_hours = hours;
+                if hours == 0 {
+                    "Maximum runtime disabled (process will run indefinitely)".to_string()
+                } else {
+                    format!("Maximum runtime set to {} hours", hours)
                 }
-                None => {
-                    println!("{}", config.url);
-                }
-            }
-        }
-        Some(ConfigCommands::Proxy { value }) => {
-            let mut config = CrashConfig::load()?;
-            match value {
-                Some(proxy) => {
-                    config.proxy = proxy;
-                    config.save()?;
-                    println!("Proxy set to: {}", proxy);
-                }
-                None => {
-                    println!("{}", config.proxy);
-                }
-            }
-        }
-        Some(ConfigCommands::Ui { value }) => {
-            let mut config = CrashConfig::load()?;
-            match value {
-                Some(ui) => {
-                    config.web.ui = ui;
-                    config.save()?;
-                    println!("Web UI set to: {}", ui);
-                }
-                None => {
-                    println!("{}", config.web.ui);
-                }
-            }
-        }
-        Some(ConfigCommands::Target { value }) => {
-            let mut config = CrashConfig::load()?;
-            match value {
-                Some(target) => {
-                    config.target = target;
-                    config.save()?;
-                    println!("Target set to: {}", target);
-                }
-                None => {
-                    println!("{}", config.target);
-                }
-            }
-        }
-        Some(ConfigCommands::Host { value }) => {
-            let mut config = CrashConfig::load()?;
-            match value {
-                Some(host) => {
-                    config.web.host = host.clone();
-                    config.save()?;
-                    println!("Web host set to: {}", host);
-                }
-                None => {
-                    println!("{}", config.web.host);
-                }
-            }
-        }
-        Some(ConfigCommands::Secret { value }) => {
-            let mut config = CrashConfig::load()?;
-            match value {
-                Some(secret) => {
-                    config.web.secret = secret;
-                    config.save()?;
-                    println!("Web secret updated successfully!");
-                }
-                None => {
-                    println!("{}", config.web.secret);
-                }
-            }
-        }
-        Some(ConfigCommands::MaxRuntime { value }) => {
-            let mut config = CrashConfig::load()?;
-            match value {
-                Some(hours) => {
-                    config.max_runtime_hours = hours;
-                    config.save()?;
-                    if hours == 0 {
-                        println!("Maximum runtime disabled (process will run indefinitely)");
-                    } else {
-                        println!("Maximum runtime set to {} hours", hours);
-                    }
-                }
-                None => {
-                    println!("{}", config.max_runtime_hours);
-                }
-            }
-        }
+            })?,
+            None => println!("{}", CrashConfig::load()?.max_runtime_hours),
+        },
     }
 
     Ok(())

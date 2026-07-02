@@ -1,14 +1,16 @@
 // Log message formatting
 
 use crate::log::LogLevel;
-use chrono::Local;
+use humantime::format_rfc3339_millis;
+use std::time::SystemTime;
 
 pub struct LogFormatter;
 
 impl LogFormatter {
-    /// Format a log message with timestamp, level, module, and message
+    /// Format a log message with timestamp, level, module, and message.
+    /// The timestamp is RFC 3339 UTC (e.g. `2026-07-02T12:34:56.123Z`).
     pub fn format_with_timestamp(level: LogLevel, module: &str, message: &str) -> String {
-        let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+        let timestamp = format_rfc3339_millis(SystemTime::now());
         let sanitized_message = Self::sanitize_sensitive_info(message);
         format!(
             "[{}] [{}] [{}] {}",
@@ -17,12 +19,6 @@ impl LogFormatter {
             module,
             sanitized_message
         )
-    }
-
-    /// Format a log message without timestamp
-    pub fn format(level: LogLevel, module: &str, message: &str) -> String {
-        let sanitized_message = Self::sanitize_sensitive_info(message);
-        format!("[{}] [{}] {}", level.as_str(), module, sanitized_message)
     }
 
     /// Sanitize sensitive information from log messages

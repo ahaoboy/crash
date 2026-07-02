@@ -8,17 +8,9 @@ pub mod process;
 pub mod time;
 pub use fs::{atomic_write, ensure_dir, file_exists};
 use std::path::Path;
-use std::process::Command;
 pub use time::{current_timestamp, format_uptime};
 
 use crate::utils::command::execute;
-
-pub async fn check_google() -> bool {
-    if let Ok(response) = reqwest::get("https://www.google.com").await {
-        return response.status().is_success();
-    }
-    false
-}
 
 pub fn get_user() -> String {
     if let Ok(v) = std::env::var("USER") {
@@ -32,60 +24,13 @@ pub fn get_user() -> String {
     "UNKNOWN".to_string()
 }
 
+/// Compute the total size of a directory tree in bytes.
+///
+/// Uses a pure-Rust recursive walk so behaviour is identical across platforms
+/// and there is no risk of shell injection from shelling out to `du` or
+/// `powershell` with an arbitrary path.
 pub fn get_dir_size(path: &Path) -> u64 {
-    if !path.exists() {
-        return 0;
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(output) = Command::new("du").arg("-s").arg(path).output()
-            && output.status.success()
-            && let Some(size_str) = String::from_utf8_lossy(&output.stdout)
-                .split_whitespace()
-                .next()
-            && let Ok(size) = size_str.parse::<u64>()
-        {
-            return size * 1024;
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        if let Ok(output) = Command::new("du").arg("-s").arg(path).output() {
-            if output.status.success() {
-                if let Some(size_str) = String::from_utf8_lossy(&output.stdout)
-                    .split_whitespace()
-                    .next()
-                {
-                    if let Ok(size_kb) = size_str.parse::<u64>() {
-                        return size_kb * 1024;
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        if let Ok(output) = Command::new("powershell")
-            .args([
-                "-c",
-                &format!(
-                    "(Get-ChildItem -Recurse '{}' | Measure-Object -Property Length -Sum).Sum",
-                    path.display()
-                ),
-            ])
-            .output()
-            && output.status.success()
-            && let Ok(size_str) = String::from_utf8(output.stdout)
-            && let Ok(size) = size_str.trim().parse::<u64>()
-        {
-            return size;
-        }
-    }
-
-    fn fallback_size(path: &Path) -> u64 {
+    fn dir_size(path: &Path) -> u64 {
         let mut size = 0;
         if let Ok(entries) = std::fs::read_dir(path) {
             for entry in entries.flatten() {
@@ -93,7 +38,7 @@ pub fn get_dir_size(path: &Path) -> u64 {
                     if metadata.is_file() {
                         size += metadata.len();
                     } else if metadata.is_dir() {
-                        size += fallback_size(&entry.path());
+                        size += dir_size(&entry.path());
                     }
                 }
             }
@@ -101,18 +46,13 @@ pub fn get_dir_size(path: &Path) -> u64 {
         size
     }
 
-    fallback_size(path)
+    if path.exists() { dir_size(path) } else { 0 }
 }
 
+/// Format a byte count as a human-readable string, using binary units
+/// (1024-based, e.g. KiB/MiB) consistently across all platforms.
 pub fn format_size(n: u64) -> String {
-    humansize::format_size(
-        n,
-        if cfg!(windows) {
-            humansize::WINDOWS
-        } else {
-            humansize::DECIMAL
-        },
-    )
+    humansize::format_size(n, humansize::BINARY)
 }
 
 const SUFFIXES: [&str; 8] = [
@@ -131,4 +71,21 @@ pub fn strip_suffix(name: &str) -> &str {
 
 pub fn is_url(s: &str) -> bool {
     s.starts_with("http://") || s.starts_with("https://")
+}
+
+/// Probe `url` via the shared HTTP client with a 5s timeout.
+///
+/// Used as a proxy health check: under TUN + `auto-route` (the mihomo
+/// default), this traffic is captured by the TUN device and forwarded
+/// through the proxy, so a success implies the proxy is forwarding
+/// correctly. A failure triggers a restart in `CrashConfig::start`.
+///
+/// The short timeout prevents a stuck proxy from hanging the (scheduled)
+/// `start` command indefinitely.
+pub async fn check_connectivity(url: &str) -> bool {
+    let fut = crate::utils::download::new_client().get(url).send();
+    match tokio::time::timeout(std::time::Duration::from_secs(5), fut).await {
+        Ok(Ok(response)) => response.status().is_success(),
+        _ => false,
+    }
 }

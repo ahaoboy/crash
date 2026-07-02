@@ -1,0 +1,12 @@
+# Crash default tun
+tun:
+  enable: true
+  device: Meta
+  stack: gVisor
+  dns-hijack:
+    - 0.0.0.0:53
+  auto-route: true
+  auto-detect-interface: true
+  gso-max-size: 65536
+  file-descriptor: 0
+  recvmsgx: true

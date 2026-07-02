@@ -2,9 +2,8 @@
 
 use crate::config::get_log_dir;
 use crate::error::{CrashError, Result};
-use once_cell::sync::Lazy;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 
 mod file_appender;
 mod formatter;
@@ -81,13 +80,19 @@ impl Logger {
     }
 }
 
-static LOGGER: Lazy<Arc<Mutex<Option<Logger>>>> = Lazy::new(|| Arc::new(Mutex::new(None)));
+static LOGGER: OnceLock<Arc<Mutex<Option<Logger>>>> = OnceLock::new();
+
+/// Lazily initialise (if needed) and return the global logger cell.
+fn logger_cell() -> &'static Arc<Mutex<Option<Logger>>> {
+    LOGGER.get_or_init(|| Arc::new(Mutex::new(None)))
+}
 
 /// Initialize the logging system with the given configuration
 pub fn init_logger(config: LogConfig) -> Result<()> {
     let logger = Logger::new(config)?;
 
-    if let Ok(mut global_logger) = LOGGER.lock() {
+    let cell = logger_cell();
+    if let Ok(mut global_logger) = cell.lock() {
         *global_logger = Some(logger);
         Ok(())
     } else {
@@ -97,12 +102,13 @@ pub fn init_logger(config: LogConfig) -> Result<()> {
 
 /// Get a reference to the global logger
 pub fn get_logger() -> Arc<Mutex<Option<Logger>>> {
-    LOGGER.clone()
+    logger_cell().clone()
 }
 
 /// Log a message at the specified level
 pub fn log(level: LogLevel, module: &str, message: &str) {
-    if let Ok(logger_guard) = LOGGER.lock()
+    let Some(cell) = LOGGER.get() else { return };
+    if let Ok(logger_guard) = cell.lock()
         && let Some(logger) = logger_guard.as_ref()
     {
         logger.log(level, module, message);

@@ -3,19 +3,16 @@
 use crate::error::{CrashError, Result};
 use crate::{log_debug, log_error, log_info, log_warn};
 use reqwest::Client;
-use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
 
-fn new_client() -> &'static Client {
+pub fn new_client() -> &'static Client {
     static CLIENT: OnceLock<Client> = OnceLock::new();
-    let timeout = Duration::from_secs(600);
     CLIENT.get_or_init(|| {
         reqwest::Client::builder()
-            .timeout(timeout)
-            .connect_timeout(timeout)
-            .tcp_keepalive(timeout)
-            .cookie_store(true)
+            .timeout(Duration::from_secs(600))
+            .connect_timeout(Duration::from_secs(30))
+            .tcp_keepalive(Duration::from_secs(60))
             .build()
             .expect("Failed to create HTTP client")
     })
@@ -74,40 +71,6 @@ pub async fn download_text(url: &str) -> Result<String> {
 
     Err(last_error
         .unwrap_or_else(|| CrashError::Download("Download failed after all retries".to_string())))
-}
-
-/// Download a file from URL to destination path with retry logic
-pub async fn download_file(url: &str, dest: &Path) -> Result<()> {
-    log_info!("Starting download from {} to {}", url, dest.display());
-
-    // Download text content
-    let text = download_text(url).await?;
-
-    // Write to file
-    log_debug!("Writing {} bytes to {}", text.len(), dest.display());
-
-    // Ensure parent directory exists
-    if let Some(parent) = dest.parent() {
-        crate::utils::fs::ensure_dir(parent)?;
-    }
-
-    std::fs::write(dest, &text).map_err(|e| {
-        CrashError::Download(format!("Failed to write file {}: {}", dest.display(), e))
-    })?;
-
-    // Validate file was written correctly
-    let written_size = std::fs::metadata(dest).map(|m| m.len()).unwrap_or(0);
-
-    if written_size != text.len() as u64 {
-        return Err(CrashError::Download(format!(
-            "File size mismatch: expected {}, got {}",
-            text.len(),
-            written_size
-        )));
-    }
-
-    log_info!("Download completed successfully: {}", url);
-    Ok(())
 }
 
 /// Single text download attempt

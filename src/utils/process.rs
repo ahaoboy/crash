@@ -66,27 +66,6 @@ pub fn stop(exe_name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Restart a process
-pub fn restart(
-    exe_name: &str,
-    exe_path: &Path,
-    args: Vec<String>,
-    env: Vec<(&str, &str)>,
-) -> Result<()> {
-    log_info!("Restarting process: {}", exe_name);
-
-    if is_running(exe_name) {
-        stop(exe_name)?;
-        // Give the process time to fully terminate
-        std::thread::sleep(std::time::Duration::from_millis(500));
-    }
-
-    start(exe_path, args, env)?;
-
-    log_info!("Process restarted successfully: {}", exe_name);
-    Ok(())
-}
-
 use crate::utils::command::execute;
 
 #[cfg(target_os = "macos")]
@@ -188,7 +167,7 @@ pub fn kill_process(name_or_path: &str) -> Result<()> {
         .and_then(|n| n.to_str())
         .unwrap_or(name_or_path);
 
-    execute("taskkill", &["/F", "/IM", process_name]  )?;
+    execute("taskkill", &["/F", "/IM", process_name])?;
     Ok(())
 }
 

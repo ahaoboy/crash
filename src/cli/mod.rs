@@ -8,7 +8,6 @@ use guess_target::Target;
 use serde::{Deserialize, Serialize};
 use strum::{EnumString, IntoStaticStr};
 pub mod commands;
-pub mod output;
 
 const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 const GIT_HASH: &str = git_version::git_version!();

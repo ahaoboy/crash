@@ -4,19 +4,11 @@ use crate::config::{CrashConfig, get_config_dir};
 use crate::error::Result;
 use crate::utils::command::execute;
 use crate::utils::process::get_pid;
-use crate::utils::time::{current_timestamp, format_uptime};
+use crate::utils::time::format_uptime;
 use crate::utils::{format_size, get_user};
 use public_ip_address::perform_lookup;
 use std::time::Duration;
 
-/// Calculate process uptime from start timestamp
-pub fn get_uptime(start_time: u64) -> Duration {
-    let current = current_timestamp();
-    if current < start_time {
-        return Duration::from_secs(0);
-    }
-    Duration::from_secs(current - start_time)
-}
 /// Get memory usage for a process by PID (Unix only)
 #[cfg(unix)]
 pub fn get_memory_usage(pid: u32) -> Result<u64> {
@@ -36,7 +28,8 @@ pub fn get_memory_usage(pid: u32) -> Result<u64> {
     Ok(0)
 }
 
-/// Get memory usage for a process by PID (Windows - not implemented)
+/// Get memory usage for a process by PID (Windows).
+/// Returns the working set size in bytes.
 #[cfg(windows)]
 pub fn get_memory_usage(pid: u32) -> Result<u64> {
     use crate::CrashError;
@@ -47,17 +40,16 @@ pub fn get_memory_usage(pid: u32) -> Result<u64> {
     )?;
 
     for line in output.lines() {
-        let line_lower = line.to_lowercase();
-        if line_lower.contains(&format!(",\"{}\",", pid)) {
-            // Parse CSV format: "name","pid","session","mem"
-            let parts: Vec<&str> = line.split(',').collect();
-            if parts.len() >= 2 {
-                let pid_str = parts[1].trim().trim_matches('"');
-                return pid_str.parse::<u64>().map_err(|e| {
-                    use crate::CrashError;
-
-                    CrashError::Process(format!("Failed to parse memory '{}': {}", pid_str, e))
-                });
+        let fields = split_csv(line);
+        // CSV columns: "Image Name","PID","Session Name","Session#","Mem Usage"
+        if fields.len() < 5 {
+            continue;
+        }
+        if fields.get(1).and_then(|s| s.trim().parse::<u32>().ok()) == Some(pid) {
+            // Mem usage field looks like "8,124 K" — keep digits only, value is in KB.
+            let kb: String = fields[4].chars().filter(|c| c.is_ascii_digit()).collect();
+            if let Ok(kb) = kb.parse::<u64>() {
+                return Ok(kb * 1024); // KB -> bytes
             }
         }
     }
@@ -65,42 +57,29 @@ pub fn get_memory_usage(pid: u32) -> Result<u64> {
     Err(CrashError::Process(format!("Process '{}' not found", pid)))
 }
 
-/// Format a comprehensive status string for the application
-pub async fn format_status(config: &CrashConfig) -> String {
-    let mut lines = vec![(
-        "version",
-        format!(
-            "{} {} ({})",
-            env!("CARGO_PKG_VERSION"),
-            git_version::git_version!(),
-            "https://github.com/ahaoboy/crash"
-        ),
-    )];
-    let exe = config.core.exe_name();
-
-    let core_name = config.core.name();
-    if let Ok(ver) = config.get_version() {
-        lines.push((
-            "core",
-            format!("{} {} ({})", core_name, ver, config.core.github(),),
-        ));
-    }
-
-    let mut is_running = false;
-    // PID if running
-    if let Ok(pid) = get_pid(&exe) {
-        lines.push(("pid", pid.to_string()));
-        is_running = true;
-
-        // Memory usage (Unix only)
-        if let Ok(memory) = get_memory_usage(pid) {
-            let kb = if cfg!(windows) { 1024 } else { 1 };
-            lines.push(("memory", format_size(kb * memory)));
+/// Split a single CSV line, respecting double-quoted fields so that commas
+/// inside quotes (e.g. `"8,124 K"`) are not treated as separators.
+#[cfg(windows)]
+fn split_csv(line: &str) -> Vec<String> {
+    let mut fields = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+    for c in line.chars() {
+        match c {
+            '"' => in_quotes = !in_quotes,
+            ',' if !in_quotes => {
+                fields.push(std::mem::take(&mut current));
+            }
+            _ => current.push(c),
         }
     }
+    fields.push(current);
+    fields
+}
 
-    // IP
-    let ip_str = if let Ok(Ok(response)) =
+/// Look up the public IP address (async, network-bound) with a 5s timeout.
+async fn lookup_public_ip() -> String {
+    if let Ok(Ok(response)) =
         tokio::time::timeout(Duration::from_secs(5), perform_lookup(None)).await
     {
         let ip = response.ip;
@@ -111,10 +90,45 @@ pub async fn format_status(config: &CrashConfig) -> String {
         }
     } else {
         "Unknown".to_string()
-    };
-    lines.push(("ip", ip_str));
+    }
+}
 
-    // Web UI info
+/// Collect all status key/value pairs using blocking operations only:
+/// subprocess calls (`get_version`, `get_pid`, `tasklist`/`pidof`), a
+/// recursive directory-size walk, and `fs4` disk-space queries. Designed to
+/// be run on a `spawn_blocking` thread so the async runtime is not stalled.
+fn build_status_lines(config: &CrashConfig, ip_str: &str) -> Vec<(&'static str, String)> {
+    let mut lines: Vec<(&'static str, String)> = vec![(
+        "version",
+        format!(
+            "{} {} ({})",
+            env!("CARGO_PKG_VERSION"),
+            git_version::git_version!(),
+            "https://github.com/ahaoboy/crash"
+        ),
+    )];
+
+    let exe = config.core.exe_name();
+    let core_name = config.core.name();
+    if let Ok(ver) = config.get_version() {
+        lines.push((
+            "core",
+            format!("{} {} ({})", core_name, ver, config.core.github()),
+        ));
+    }
+
+    let mut is_running = false;
+    if let Ok(pid) = get_pid(&exe) {
+        lines.push(("pid", pid.to_string()));
+        is_running = true;
+
+        if let Ok(memory) = get_memory_usage(pid) {
+            lines.push(("memory", format_size(memory)));
+        }
+    }
+
+    lines.push(("ip", ip_str.to_string()));
+
     if let Ok(ip) = local_ip_address::local_ip() {
         let port = config.web.host.split(':').nth(1).unwrap_or("9090");
         let ui_name = config.web.ui_name();
@@ -130,7 +144,6 @@ pub async fn format_status(config: &CrashConfig) -> String {
         ));
     }
 
-    // Status and uptime
     let status_icon = if is_running { "✅" } else { "❌" };
     let uptime = if is_running && config.start_time > 0 {
         format_uptime(config.start_time)
@@ -138,7 +151,6 @@ pub async fn format_status(config: &CrashConfig) -> String {
         "0s".to_string()
     };
 
-    // Add max runtime info to status if enabled
     let status_text = if config.max_runtime_hours > 0 {
         format!(
             "{} {} (max: {}h)",
@@ -152,6 +164,7 @@ pub async fn format_status(config: &CrashConfig) -> String {
     lines.push(("proxy", config.proxy.to_string()));
     let user_prefix = if is_admin::is_admin() { "#" } else { "$" };
     lines.push(("user", format!("{}{}", user_prefix, get_user())));
+
     let config_dir = get_config_dir();
     lines.push((
         "config",
@@ -164,10 +177,32 @@ pub async fn format_status(config: &CrashConfig) -> String {
         ),
     ));
 
+    lines
+}
+
+/// Render a list of `(key, value)` pairs as an aligned `key : value` block.
+fn render_lines(lines: &[(&str, String)]) -> String {
     let key_len = lines.iter().fold(0, |a, b| a.max(b.0.len()));
     lines
         .iter()
         .map(|(k, v)| format!("{:width$} : {}", k, v, width = key_len))
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// Format a comprehensive status string for the application.
+///
+/// The public-IP lookup is network-bound and stays on the async runtime
+/// (with a timeout). Everything else is blocking work — subprocess calls,
+/// directory walks, disk-space queries — and is dispatched to a blocking
+/// thread pool so it cannot stall the runtime.
+pub async fn format_status(config: &CrashConfig) -> String {
+    let ip_str = lookup_public_ip().await;
+
+    let config = config.clone();
+    let lines = tokio::task::spawn_blocking(move || build_status_lines(&config, &ip_str))
+        .await
+        .unwrap_or_else(|e| vec![("error", format!("status build failed: {}", e))]);
+
+    render_lines(&lines)
 }
