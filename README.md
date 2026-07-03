@@ -316,4 +316,6 @@ Issues and Pull Requests are welcome!
 ## Links
 
 - [GitHub Repository](https://github.com/ahaoboy/crash)
+- [Crash Assets](https://github.com/ahaoboy/crash-assets)
+- [Crash UI](https://github.com/ahaoboy/crash-ui)
 - [Issue Tracker](https://github.com/ahaoboy/crash/issues)
