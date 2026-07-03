@@ -7,7 +7,117 @@ use crate::utils::process::get_pid;
 use crate::utils::time::format_uptime;
 use crate::utils::{format_size, get_user};
 use public_ip_address::perform_lookup;
+use std::net::IpAddr;
 use std::time::Duration;
+
+/// Get the best LAN IP address, filtering out TUN/TAP virtual interfaces.
+///
+/// On Linux, Mihomo/Clash TUN mode creates a virtual interface (commonly
+/// with IP in `198.18.0.0/15`). This function skips those and prefers
+/// physical/bridge interfaces like `eth0`, `br0`, `wlan0`, etc.
+#[cfg(unix)]
+fn get_lan_ip() -> Option<IpAddr> {
+    use std::ffi::CStr;
+
+    let mut ifaces: *mut libc::ifaddrs = std::ptr::null_mut();
+    if unsafe { libc::getifaddrs(&mut ifaces) } != 0 {
+        return local_ip_address::local_ip().ok();
+    }
+
+    let mut best_ip: Option<IpAddr> = None;
+    let mut fallback_ip: Option<IpAddr> = None;
+
+    let mut current = ifaces;
+    while !current.is_null() {
+        unsafe {
+            let ifa_addr = (*current).ifa_addr;
+            let ifa_name = (*current).ifa_name;
+
+            if ifa_addr.is_null() || ifa_name.is_null() {
+                current = (*current).ifa_next;
+                continue;
+            }
+
+            let family = (*ifa_addr).sa_family as libc::c_int;
+            if family != libc::AF_INET {
+                current = (*current).ifa_next;
+                continue;
+            }
+
+            let name = CStr::from_ptr(ifa_name).to_string_lossy();
+
+            // Parse IPv4 from sockaddr_in
+            let sockaddr = &*(ifa_addr as *const libc::sockaddr_in);
+            let octets = sockaddr.sin_addr.s_addr.to_ne_bytes();
+            let ip = IpAddr::from(octets);
+
+            // Skip loopback
+            if ip.is_loopback() {
+                current = (*current).ifa_next;
+                continue;
+            }
+
+            // Skip TUN/TAP interface names
+            let name_lower = name.to_lowercase();
+            if name_lower.starts_with("tun")
+                || name_lower.starts_with("tap")
+                || name_lower.starts_with("utun")
+                || name_lower.starts_with("zt")
+            {
+                current = (*current).ifa_next;
+                continue;
+            }
+
+            // Skip IPs in the 198.18.0.0/15 range (used by Clash/Mihomo TUN)
+            if is_tun_ip_range(&ip) {
+                current = (*current).ifa_next;
+                continue;
+            }
+
+            // Prefer physical/bridge interfaces
+            if name_lower.starts_with("eth")
+                || name_lower.starts_with("en")
+                || name_lower.starts_with("br")
+                || name_lower.starts_with("wlan")
+                || name_lower.starts_with("wl")
+                || name_lower.starts_with("bond")
+            {
+                best_ip = Some(ip);
+                break;
+            }
+
+            if fallback_ip.is_none() {
+                fallback_ip = Some(ip);
+            }
+            current = (*current).ifa_next;
+        }
+    }
+
+    unsafe { libc::freeifaddrs(ifaces) };
+
+    best_ip
+        .or(fallback_ip)
+        .or_else(|| local_ip_address::local_ip().ok())
+}
+
+/// Check if an IP falls in the 198.18.0.0/15 range commonly used by
+/// Clash/Mihomo TUN virtual devices.
+#[cfg(unix)]
+fn is_tun_ip_range(ip: &IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(v4) => {
+            let o = v4.octets();
+            o[0] == 198 && (o[1] == 18 || o[1] == 19)
+        }
+        IpAddr::V6(_) => false,
+    }
+}
+
+/// Get the best LAN IP (Windows: delegate to `local_ip_address`).
+#[cfg(windows)]
+fn get_lan_ip() -> Option<IpAddr> {
+    local_ip_address::local_ip().ok()
+}
 
 /// Get memory usage for a process by PID (Unix only)
 #[cfg(unix)]
@@ -129,7 +239,7 @@ fn build_status_lines(config: &CrashConfig, ip_str: &str) -> Vec<(&'static str, 
 
     lines.push(("ip", ip_str.to_string()));
 
-    if let Ok(ip) = local_ip_address::local_ip() {
+    if let Some(ip) = get_lan_ip() {
         let port = config.web.host.split(':').nth(1).unwrap_or("9090");
         let ui_name = config.web.ui_name();
 

@@ -24,6 +24,7 @@ use strum::{Display, EnumString, IntoStaticStr};
 )]
 pub enum UiType {
     #[default]
+    CrashUI,
     Metacubexd,
     Yacd,
 }
@@ -72,6 +73,15 @@ impl WebConfig {
                     }
                 }
             }
+            UiType::CrashUI => {
+                let start_pattern = "<meta name=\"version\" content=\"";
+                if let Some(start) = content.find(start_pattern) {
+                    let start = start + start_pattern.len();
+                    if let Some(end) = content[start..].find('"') {
+                        return Some(content[start..start + end].to_string());
+                    }
+                }
+            }
             UiType::Yacd => {}
         }
         None
@@ -83,6 +93,7 @@ impl WebConfig {
         match self.ui {
             Yacd => "yacd.tar.gz".to_string(),
             Metacubexd => "metacubexd.tar.gz".to_string(),
+            CrashUI => "crash-ui.tar.gz".to_string(),
         }
     }
 
