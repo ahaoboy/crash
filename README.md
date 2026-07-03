@@ -318,4 +318,5 @@ Issues and Pull Requests are welcome!
 - [GitHub Repository](https://github.com/ahaoboy/crash)
 - [Crash Assets](https://github.com/ahaoboy/crash-assets)
 - [Crash UI](https://github.com/ahaoboy/crash-ui)
+- [metacubexd](https://github.com/MetaCubeX/metacubexd)
 - [Issue Tracker](https://github.com/ahaoboy/crash/issues)
