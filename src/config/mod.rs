@@ -13,7 +13,7 @@ use crate::log_info;
 use crate::utils::fs::{atomic_write, ensure_dir};
 use crate::utils::get_dir_size;
 use github_proxy::Proxy;
-use guess_target::Target;
+use guess_target::{Target, get_local_target};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -58,7 +58,7 @@ impl Default for CrashConfig {
             start_time: 0,
             core: Core::default(),
             proxy: Proxy::default(),
-            target: Target::default(),
+            target: *get_local_target().first().unwrap_or(&Target::default()),
             web: WebConfig::default(),
             url: String::new(),
             stop_force: false,
