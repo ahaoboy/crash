@@ -1,5 +1,7 @@
 # Crash
 
+[![Crash Tauri](https://raw.githubusercontent.com/ahaoboy/crash-tauri/main/src-tauri/icons/icon.png)](https://github.com/ahaoboy/crash-tauri)
+
 A Rust-based proxy core management tool supporting Clash/Mihomo/SingBox and other proxy cores. This is a Rust port of [ShellCrash](https://github.com/juewuy/ShellCrash).
 
 ## Features
@@ -15,6 +17,10 @@ A Rust-based proxy core management tool supporting Clash/Mihomo/SingBox and othe
 <div style="display: flex;">
   <img src="./assets/crash.svg" alt="crash"/>
 </div>
+
+## Desktop Client
+
+A cross-platform desktop GUI client built with [Tauri](https://tauri.app/): **[crash-tauri](https://github.com/ahaoboy/crash-tauri)**
 
 ## Installation
 
