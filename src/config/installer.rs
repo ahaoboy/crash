@@ -101,7 +101,7 @@ impl CrashConfig {
     pub fn ei_config(&self, dir: &str, alias: Option<String>) -> InstallConfig {
         easy_install::InstallConfig {
             dir: Some(dir.to_string()),
-            install_only: true,
+            no_path: true,
             proxy: self.proxy,
             alias,
             target: Some(self.target),
