@@ -128,9 +128,8 @@ impl CrashConfig {
         let result = ei(
             &url,
             &self.ei_config(
-                &config_dir.to_string_lossy(),
-                Some(self.web.ui_name().to_string()),
-            ),
+                &config_dir.join(self.web.ui_name()).to_string_lossy(),
+                None,),
         )
         .await;
 
