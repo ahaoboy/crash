@@ -19,7 +19,7 @@ pub fn patch_config(core: Core, web: &WebConfig, config: &str) -> String {
             if has_tun {
                 config.to_string()
             } else {
-                format!("{}\n{}", config, MIHOMO_TUN_YAML)
+                format!("{}\n{}", MIHOMO_TUN_YAML, config)
             }
         }
         Core::Clash => config.replace("- 'RULE-SET,", "#- 'RULE-SET,").to_string(),

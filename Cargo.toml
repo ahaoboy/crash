@@ -5,7 +5,6 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/ahaoboy/crash"
-homepage = "https://github.com/ahaoboy/crash"
 authors = ["ahaoboy"]
 include = ["/src", "/Cargo.toml", "/README.md"]
 
@@ -30,6 +29,8 @@ guess-target = { version = "0.1", git = "https://github.com/ahaoboy/guess-target
 github-proxy = { version = "0.1", git = "https://github.com/ahaoboy/github-proxy", features = [
   "serde",
 ] }
+
+# To reduce the size, all dependency packages are provided in .tar.gz format.
 easy-install = { version = "1", git = "https://github.com/easy-install/easy-install", default-features = false, features = [
   "tar-gz",
 ] }
