@@ -73,10 +73,7 @@ impl CrashConfig {
 
         let result = ei(
             &url,
-            &self.ei_config(
-                &get_config_dir().to_string_lossy(),
-                Some(self.core.name().to_string()),
-            ),
+            &self.ei_config(get_config_dir(), Some(self.core.name().to_string())),
         )
         .await;
 
@@ -98,9 +95,9 @@ impl CrashConfig {
     }
 
     /// Build an `easy_install` config derived from this crash config.
-    pub fn ei_config(&self, dir: &str, alias: Option<String>) -> InstallConfig {
+    pub fn ei_config<T: AsRef<Path>>(&self, dir: T, alias: Option<String>) -> InstallConfig {
         easy_install::InstallConfig {
-            dir: Some(dir.to_string()),
+            dir: Some(dir.as_ref().to_string_lossy().to_string()),
             no_path: true,
             proxy: self.proxy,
             alias,
@@ -127,9 +124,7 @@ impl CrashConfig {
 
         let result = ei(
             &url,
-            &self.ei_config(
-                &config_dir.join(self.web.ui_name()).to_string_lossy(),
-                None,),
+            &self.ei_config(config_dir.join(self.web.ui_name()), None),
         )
         .await;
 
@@ -173,12 +168,9 @@ impl CrashConfig {
 
             log_info!("Downloading GeoIP database: {}", name);
 
-            if ei(
-                &url,
-                &self.ei_config(&get_config_dir().to_string_lossy(), None),
-            )
-            .await
-            .is_ok()
+            if ei(&url, &self.ei_config(get_config_dir(), None))
+                .await
+                .is_ok()
             {
                 log_info!("Downloaded {} successfully", name);
             } else {
@@ -196,7 +188,6 @@ impl CrashConfig {
         let dir = exe
             .parent()
             .ok_or_else(|| CrashError::Download("crash dir not found".to_string()))?;
-        let dir = &dir.to_string_lossy();
         let url = match repo {
             UpgradeRepo::Crash => "ahaoboy/crash",
             UpgradeRepo::CrashAssets => "ahaoboy/crash-assets",
