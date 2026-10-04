@@ -11,7 +11,8 @@ use crate::utils::check_connectivity;
 use crate::utils::command::execute;
 use crate::utils::current_timestamp;
 use crate::utils::process::{get_pid, start, stop};
-use crate::{log_debug, log_info};
+use crate::utils::tun::{ensure_tun_device, tun_enabled_json, tun_enabled_yaml};
+use crate::{log_debug, log_info, log_warn};
 
 impl CrashConfig {
     /// Start the proxy core, restarting it first if `force` or if the runtime
@@ -66,12 +67,46 @@ impl CrashConfig {
             }
         }
 
+        // TUN device prep is only meaningful when the active core config
+        // enables TUN; skip it entirely otherwise. Failures inside are logged
+        // and never abort the start.
+        if self.tun_enabled() {
+            ensure_tun_device();
+        } else {
+            log_info!("TUN not enabled in core config, skipping TUN device setup");
+        }
+
         self.start_core()?;
         self.start_time = current_timestamp();
         self.save()?;
 
         log_info!("Proxy core started successfully");
         Ok(())
+    }
+
+    /// Whether the active core's configuration enables TUN.
+    ///
+    /// Gates the TUN device preparation: without TUN there is no point
+    /// touching the `tun` kernel module or `/dev/net/tun`. A config that is
+    /// missing or cannot be parsed is treated as TUN-disabled, so this check
+    /// can never block a start on its own.
+    pub fn tun_enabled(&self) -> bool {
+        let path = self.core_config_path();
+        let Ok(config) = std::fs::read_to_string(&path) else {
+            log_warn!(
+                "Failed to read core config {}, assuming TUN disabled",
+                path.display()
+            );
+            return false;
+        };
+
+        let enabled = match self.core {
+            Core::Mihomo | Core::Clash => tun_enabled_yaml(&config),
+            Core::Singbox => tun_enabled_json(&config),
+        };
+
+        log_debug!("TUN enabled in {}: {}", path.display(), enabled);
+        enabled
     }
 
     /// Spawn the core executable with the right arguments for the current core.

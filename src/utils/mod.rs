@@ -6,6 +6,7 @@ pub mod monitor;
 pub mod path;
 pub mod process;
 pub mod time;
+pub mod tun;
 pub use fs::{atomic_write, ensure_dir, file_exists};
 use std::path::Path;
 pub use time::{current_timestamp, format_uptime};
