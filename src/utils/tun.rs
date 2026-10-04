@@ -12,89 +12,98 @@
 //   - device creation    -> `libc::mknod`          (instead of `mknod`)
 //   - device permissions -> `libc::chmod`          (instead of `chmod`)
 //
+// The core config's `tun` section is inspected with `serde-saphyr` (YAML) and
+// `serde_json` (JSON) so the check is a real parse rather than string matching.
+//
 // Every failure is only logged, never propagated: a missing TUN device must
 // not abort a start that might otherwise succeed (e.g. a non-root user with a
 // non-TUN config, or a platform where TUN is handled differently).
 
-/// Whether a Mihomo/Clash YAML config enables TUN.
+use serde::Deserialize;
+
+/// Typed view of the Mihomo/Clash `tun` section.
 ///
-/// Looks for a top-level `tun:` mapping and, inside its (indented) block, for
-/// `enable: true`. Deliberately a small hand-rolled scan — the same approach
-/// `patcher::patch_config` uses to detect an existing `tun` block — so the
-/// crate does not need a full YAML parser just for this single boolean.
+/// Parsing is type-driven (`serde-saphyr` uses the Rust types as the schema),
+/// so only the single field we care about needs declaring; every other key in
+/// the real config is ignored.
+#[derive(Deserialize)]
+struct MihomoConfig {
+    #[serde(default)]
+    tun: Option<MihomoTun>,
+}
+
+#[derive(Deserialize)]
+struct MihomoTun {
+    #[serde(default)]
+    enable: bool,
+}
+
+/// Typed view of a sing-box config's `inbounds` entries.
+#[derive(Deserialize)]
+struct SingboxConfig {
+    #[serde(default)]
+    inbounds: Vec<SingboxInbound>,
+}
+
+#[derive(Deserialize)]
+struct SingboxInbound {
+    #[serde(rename = "type", default)]
+    kind: Option<String>,
+    /// sing-box treats an omitted `enabled` as enabled.
+    #[serde(default = "default_enabled")]
+    enabled: bool,
+}
+
+fn default_enabled() -> bool {
+    true
+}
+
+/// Parse a Mihomo/Clash config, logging and swallowing any parse error.
 ///
-/// Unreadable/absent keys are treated as disabled, so a malformed config can
-/// never force device setup on.
-pub fn tun_enabled_yaml(config: &str) -> bool {
-    let mut in_tun = false;
-    let mut enabled = false;
-
-    for raw in config.lines() {
-        // Drop a trailing inline comment, but only when the `#` starts a
-        // comment (preceded by whitespace) rather than appearing inside a
-        // value such as a quoted URL.
-        let line = match raw.split_once('#') {
-            Some((before, _)) if before.is_empty() || before.ends_with(' ') => before,
-            _ => raw,
-        };
-
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-
-        let indent = line.len() - line.trim_start().len();
-
-        if in_tun {
-            if indent == 0 {
-                // Left the `tun` block; fall through to treat this as the
-                // next top-level key.
-                in_tun = false;
-            } else {
-                if let Some(value) = trimmed.strip_prefix("enable:") {
-                    enabled = parse_bool(value).unwrap_or(false);
-                }
-                continue;
-            }
-        }
-
-        if indent == 0 && trimmed == "tun:" {
-            in_tun = true;
+/// A config that cannot be parsed yields `None`, so callers treat malformed
+/// input as "no TUN information" rather than failing hard.
+fn parse_mihomo(config: &str) -> Option<MihomoConfig> {
+    match serde_saphyr::from_str::<MihomoConfig>(config) {
+        Ok(parsed) => Some(parsed),
+        Err(e) => {
+            crate::log_debug!("Failed to parse YAML config: {}", e);
+            None
         }
     }
+}
 
-    enabled
+/// Whether a Mihomo/Clash YAML config defines a `tun` section at all,
+/// regardless of whether it is enabled.
+///
+/// Used by the config patcher to decide whether the default TUN block still
+/// needs to be injected.
+pub fn has_tun_yaml(config: &str) -> bool {
+    parse_mihomo(config).is_some_and(|parsed| parsed.tun.is_some())
+}
+
+/// Whether a Mihomo/Clash YAML config enables TUN (`tun.enable: true`).
+///
+/// Uses `serde-saphyr` rather than a hand-rolled line scan, so comments,
+/// quoting, anchors/merge keys, indentation and block structure are all handled
+/// by a real parser. A config that cannot be parsed is treated as
+/// TUN-disabled, so malformed input can never force device setup on.
+pub fn tun_enabled_yaml(config: &str) -> bool {
+    parse_mihomo(config)
+        .and_then(|parsed| parsed.tun)
+        .is_some_and(|tun| tun.enable)
 }
 
 /// Whether a sing-box JSON config declares an enabled `tun` inbound.
 pub fn tun_enabled_json(config: &str) -> bool {
-    let Ok(value) = serde_json::from_str::<serde_json::Value>(config) else {
-        return false;
-    };
-
-    value
-        .get("inbounds")
-        .and_then(|inbounds| inbounds.as_array())
-        .is_some_and(|inbounds| {
-            inbounds.iter().any(|inbound| {
-                inbound.get("type").and_then(|t| t.as_str()) == Some("tun")
-                    && inbound
-                        .get("enabled")
-                        .and_then(|e| e.as_bool())
-                        .unwrap_or(true)
-            })
-        })
-}
-
-/// Parse a YAML scalar as a boolean, accepting the usual truthy/falsey spellings.
-fn parse_bool(value: &str) -> Option<bool> {
-    let token = value.split_whitespace().next().unwrap_or("");
-    let token = token.trim_matches(|c| c == '"' || c == '\'' || c == ',');
-
-    match token.to_ascii_lowercase().as_str() {
-        "true" | "yes" | "on" => Some(true),
-        "false" | "no" | "off" => Some(false),
-        _ => None,
+    match serde_json::from_str::<SingboxConfig>(config) {
+        Ok(parsed) => parsed
+            .inbounds
+            .iter()
+            .any(|inbound| inbound.kind.as_deref() == Some("tun") && inbound.enabled),
+        Err(e) => {
+            crate::log_debug!("Failed to parse JSON config for TUN check: {}", e);
+            false
+        }
     }
 }
 
@@ -292,12 +301,28 @@ mod tests {
     }
 
     #[test]
+    fn yaml_has_tun_reports_presence() {
+        // Presence is independent of `enable`.
+        assert!(has_tun_yaml("tun:\n  enable: false\n"));
+        assert!(has_tun_yaml("tun:\n  stack: gVisor\n"));
+        assert!(has_tun_yaml("port: 7890\ntun: {}\n"));
+
+        assert!(!has_tun_yaml("port: 7890\n"));
+        // A shared prefix is not a `tun` section.
+        assert!(!has_tun_yaml("tun-proxy: 7890\n"));
+        // Nested under another key is not the core's TUN section.
+        assert!(!has_tun_yaml("proxy:\n  tun:\n    enable: true\n"));
+        // Unparseable input reports no presence.
+        assert!(!has_tun_yaml("tun: [unclosed\n"));
+    }
+
+    #[test]
     fn yaml_handles_comments_and_spacing() {
         assert!(tun_enabled_yaml(
             "tun: # enable tun\n  enable: true # yes\n"
         ));
-        // Not a top-level `tun:` key.
-        assert!(!tun_enabled_yaml("  tun:\n    enable: true\n"));
+        // A `tun` nested under another key is not the core's TUN section.
+        assert!(!tun_enabled_yaml("proxy:\n  tun:\n    enable: true\n"));
     }
 
     #[test]

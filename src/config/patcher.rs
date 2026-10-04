@@ -6,6 +6,7 @@
 
 use super::core::Core;
 use super::web::WebConfig;
+use crate::utils::tun::has_tun_yaml;
 use serde_json::{Value, json};
 
 /// Default TUN block appended to Mihomo configs that don't already define one.
@@ -15,8 +16,7 @@ const MIHOMO_TUN_YAML: &str = include_str!("../assets/mihomo_tun.yaml");
 pub fn patch_config(core: Core, web: &WebConfig, config: &str) -> String {
     match core {
         Core::Mihomo => {
-            let has_tun = config.lines().any(|i| i.starts_with("tun"));
-            if has_tun {
+            if has_tun_yaml(config) {
                 config.to_string()
             } else {
                 format!("{}\n{}", MIHOMO_TUN_YAML, config)
@@ -103,7 +103,9 @@ mod tests {
         let input = "port: 7890\n";
         let out = patch_config(Core::Mihomo, &web(), input);
         assert!(out.contains("tun:"));
-        assert!(out.starts_with("port: 7890"));
+        // The default TUN block is prepended, original config kept intact.
+        assert!(out.starts_with("# Crash default tun"));
+        assert!(out.ends_with(input));
     }
 
     #[test]
@@ -112,6 +114,14 @@ mod tests {
         let out = patch_config(Core::Mihomo, &web(), input);
         // Should not append the default tun block since one already exists.
         assert!(!out.contains("device: Meta"));
+    }
+
+    #[test]
+    fn mihomo_ignores_tun_key_with_prefix() {
+        // `tun-proxy` only shares a prefix; it is not a `tun` section.
+        let input = "tun-proxy: 7890\n";
+        let out = patch_config(Core::Mihomo, &web(), input);
+        assert!(out.contains("device: Meta"));
     }
 
     #[test]
