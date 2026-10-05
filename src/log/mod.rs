@@ -1,7 +1,7 @@
-// Logging infrastructure for the Crash application
+// Logging infrastructure for the Mho application
 
 use crate::config::get_log_dir;
-use crate::error::{CrashError, Result};
+use crate::error::{MhoError, Result};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
 
@@ -96,7 +96,7 @@ pub fn init_logger(config: LogConfig) -> Result<()> {
         *global_logger = Some(logger);
         Ok(())
     } else {
-        Err(CrashError::Log("Failed to acquire logger lock".to_string()))
+        Err(MhoError::Log("Failed to acquire logger lock".to_string()))
     }
 }
 

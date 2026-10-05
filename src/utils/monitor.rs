@@ -1,6 +1,6 @@
 // Process monitoring and status tracking
 
-use crate::config::{CrashConfig, get_config_dir};
+use crate::config::{MhoConfig, get_config_dir};
 use crate::error::Result;
 use crate::utils::command::execute;
 use crate::utils::process::get_pid;
@@ -142,7 +142,7 @@ pub fn get_memory_usage(pid: u32) -> Result<u64> {
 /// Returns the working set size in bytes.
 #[cfg(windows)]
 pub fn get_memory_usage(pid: u32) -> Result<u64> {
-    use crate::CrashError;
+    use crate::MhoError;
 
     let output = execute(
         "tasklist",
@@ -164,7 +164,7 @@ pub fn get_memory_usage(pid: u32) -> Result<u64> {
         }
     }
 
-    Err(CrashError::Process(format!("Process '{}' not found", pid)))
+    Err(MhoError::Process(format!("Process '{}' not found", pid)))
 }
 
 /// Split a single CSV line, respecting double-quoted fields so that commas
@@ -207,14 +207,14 @@ async fn lookup_public_ip() -> String {
 /// subprocess calls (`get_version`, `get_pid`, `tasklist`/`pidof`), a
 /// recursive directory-size walk, and `fs4` disk-space queries. Designed to
 /// be run on a `spawn_blocking` thread so the async runtime is not stalled.
-fn build_status_lines(config: &CrashConfig, ip_str: &str) -> Vec<(&'static str, String)> {
+fn build_status_lines(config: &MhoConfig, ip_str: &str) -> Vec<(&'static str, String)> {
     let mut lines: Vec<(&'static str, String)> = vec![(
         "version",
         format!(
             "{} {} ({})",
             env!("CARGO_PKG_VERSION"),
             git_version::git_version!(),
-            "https://github.com/ahaoboy/crash"
+            "https://github.com/ahaoboy/mho"
         ),
     )];
 
@@ -306,7 +306,7 @@ fn render_lines(lines: &[(&str, String)]) -> String {
 /// (with a timeout). Everything else is blocking work — subprocess calls,
 /// directory walks, disk-space queries — and is dispatched to a blocking
 /// thread pool so it cannot stall the runtime.
-pub async fn format_status(config: &CrashConfig) -> String {
+pub async fn format_status(config: &MhoConfig) -> String {
     let ip_str = lookup_public_ip().await;
 
     let config = config.clone();

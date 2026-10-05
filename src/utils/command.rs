@@ -1,7 +1,7 @@
 // Cross-platform command execution utilities
 
 use crate::{
-    error::{CrashError, Result},
+    error::{MhoError, Result},
     log_info,
 };
 use std::process::{Command, Stdio};
@@ -25,13 +25,13 @@ pub fn execute(cmd: &str, args: &[&str]) -> Result<String> {
 
     let output = c
         .output()
-        .map_err(|e| CrashError::Platform(format!("Failed to execute command '{}': {}", cmd, e)))?;
+        .map_err(|e| MhoError::Platform(format!("Failed to execute command '{}': {}", cmd, e)))?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(CrashError::Platform(format!(
+        Err(MhoError::Platform(format!(
             "Command '{}' failed with status {}: {}",
             cmd, output.status, stderr
         )))

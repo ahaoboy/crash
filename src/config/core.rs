@@ -1,6 +1,6 @@
 // Core-specific configuration
 
-use crate::error::{CrashError, Result};
+use crate::error::{MhoError, Result};
 use crate::utils::path::exe_extension;
 use github_proxy::Resource;
 use guess_target::Target;
@@ -92,7 +92,7 @@ impl Core {
             }
             (Singbox, Target::X86_64UnknownLinuxGnu) => "sing-box-linux-amd64.tar.gz",
             _ => {
-                return Err(CrashError::Config(format!(
+                return Err(MhoError::Config(format!(
                     "Unsupported core type {:?} on target {:?}",
                     self, target
                 )));
@@ -108,7 +108,7 @@ impl Core {
 
         Ok(Resource::File {
             owner: "ahaoboy".to_string(),
-            repo: "crash-assets".to_string(),
+            repo: "mho-assets".to_string(),
             reference: "main".to_string(),
             path: filename.to_string(),
         })

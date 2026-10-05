@@ -7,11 +7,11 @@
 // )]
 
 use clap::Parser;
-use crash::cli::Cli;
-use crash::cli::commands::handle;
-use crash::error::Result;
-use crash::log::{LogConfig, init_logger};
-use crash::{log_error, log_info};
+use mho::cli::Cli;
+use mho::cli::commands::handle;
+use mho::error::Result;
+use mho::log::{LogConfig, init_logger};
+use mho::{log_error, log_info};
 
 #[cfg(windows)]
 fn attach_console() {
@@ -45,7 +45,7 @@ async fn main() {
         // Continue without logging rather than failing
     }
 
-    log_info!("Crash application starting");
+    log_info!("Mho application starting");
 
     // Run the application and handle errors
     if let Err(e) = run().await {
@@ -54,7 +54,7 @@ async fn main() {
         std::process::exit(1);
     }
 
-    log_info!("Crash application exiting");
+    log_info!("Mho application exiting");
 }
 
 /// Initialize the logging system

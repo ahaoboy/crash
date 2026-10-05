@@ -41,10 +41,10 @@ set -e
 # CONFIGURATION - Modify these variables to adapt to your project
 # ============================================================================
 EI_OWNER="ahaoboy"
-EI_REPO="crash"
+EI_REPO="mho"
 EI_TAG="latest"
-EI_BINARY_NAME="crash"
-EI_DIR="~/.crash"  # Installation directory (empty = auto-detect based on permissions)
+EI_BINARY_NAME="mho"
+EI_DIR="~/.mho"  # Installation directory (empty = auto-detect based on permissions)
 
 # Resource type: "release" (GitHub release) or "file" (GitHub raw file)
 # Default: "release" - downloads from GitHub releases

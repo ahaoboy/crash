@@ -1,2 +1,2 @@
-ansi2 cmd -c "neofetch" -c "crash install" -c "crash update-url" -c "crash start" -c "curl google.com" -f ans > assets/crash.ans
-ansi2 assets/crash.ans > assets/crash.svg
+ansi2 cmd -c "neofetch" -c "mho install" -c "mho update-url" -c "mho start" -c "curl google.com" -f ans > assets/mho.ans
+ansi2 assets/mho.ans > assets/mho.svg

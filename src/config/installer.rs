@@ -3,11 +3,11 @@
 // Split out of `config/mod.rs` to keep storage/validation logic small and
 // let this file focus on downloading / extracting / updating assets.
 
-use super::CrashConfig;
+use super::MhoConfig;
 use super::get_config_dir;
 use super::patcher::patch_config;
 use crate::cli::UpgradeRepo;
-use crate::error::{CrashError, Result};
+use crate::error::{MhoError, Result};
 use crate::log_info;
 use crate::utils::download::download_text;
 use crate::utils::fs::{atomic_write, ensure_dir, file_exists};
@@ -16,7 +16,7 @@ use easy_install::{InstallConfig, ei};
 use github_proxy::{Proxy, Resource};
 use std::path::Path;
 
-impl CrashConfig {
+impl MhoConfig {
     /// Install the proxy core, web UI and geo databases.
     pub async fn install(&self, force: bool) -> Result<()> {
         log_info!("Installing proxy core and UI (force: {})", force);
@@ -67,7 +67,7 @@ impl CrashConfig {
         let url = self
             .proxy
             .url(resource)
-            .ok_or_else(|| CrashError::Download("Failed to get core download URL".to_string()))?;
+            .ok_or_else(|| MhoError::Download("Failed to get core download URL".to_string()))?;
 
         log_info!("Downloading core from: {}", url);
 
@@ -78,13 +78,13 @@ impl CrashConfig {
         .await;
 
         if result.is_err() {
-            return Err(CrashError::Download(
+            return Err(MhoError::Download(
                 "Failed to install core binary".to_string(),
             ));
         }
 
         if !file_exists(&exe_path) {
-            return Err(CrashError::Download(format!(
+            return Err(MhoError::Download(format!(
                 "Core binary not found after installation: {}",
                 exe_path.display()
             )));
@@ -94,7 +94,7 @@ impl CrashConfig {
         Ok(())
     }
 
-    /// Build an `easy_install` config derived from this crash config.
+    /// Build an `easy_install` config derived from this mho config.
     pub fn ei_config<T: AsRef<Path>>(&self, dir: T, alias: Option<String>) -> InstallConfig {
         easy_install::InstallConfig {
             dir: Some(dir.as_ref().to_string_lossy().to_string()),
@@ -129,11 +129,11 @@ impl CrashConfig {
         .await;
 
         if result.is_err() {
-            return Err(CrashError::Download("Failed to install UI".to_string()));
+            return Err(MhoError::Download("Failed to install UI".to_string()));
         }
 
         if !ui_dir.exists() {
-            return Err(CrashError::Download(format!(
+            return Err(MhoError::Download(format!(
                 "UI directory not found after installation: {}",
                 ui_dir.display()
             )));
@@ -150,7 +150,7 @@ impl CrashConfig {
         for name in self.core.get_geo_files() {
             let Some(url) = Resource::File {
                 owner: "ahaoboy".to_string(),
-                repo: "crash-assets".to_string(),
+                repo: "mho-assets".to_string(),
                 reference: "main".to_string(),
                 path: name.to_string(),
             }
@@ -182,26 +182,26 @@ impl CrashConfig {
         Ok(())
     }
 
-    /// Upgrade the `crash` (or `crash-assets`) binary in place.
+    /// Upgrade the `mho` (or `mho-assets`) binary in place.
     pub async fn upgrade(&self, repo: UpgradeRepo) -> Result<()> {
         let exe = std::env::current_exe()?;
         let dir = exe
             .parent()
-            .ok_or_else(|| CrashError::Download("crash dir not found".to_string()))?;
+            .ok_or_else(|| MhoError::Download("mho dir not found".to_string()))?;
         let url = match repo {
-            UpgradeRepo::Crash => "ahaoboy/crash",
-            UpgradeRepo::CrashAssets => "ahaoboy/crash-assets",
+            UpgradeRepo::Mho => "ahaoboy/mho",
+            UpgradeRepo::MhoAssets => "ahaoboy/mho-assets",
         };
         ei(
             url,
             &InstallConfig {
-                name: vec!["crash".to_string()],
-                upx: repo == UpgradeRepo::Crash,
-                ..self.ei_config(dir, Some("crash".to_string()))
+                name: vec!["mho".to_string()],
+                upx: repo == UpgradeRepo::Mho,
+                ..self.ei_config(dir, Some("mho".to_string()))
             },
         )
         .await
-        .map_err(|e| CrashError::Download(e.to_string()))?;
+        .map_err(|e| MhoError::Download(e.to_string()))?;
 
         Ok(())
     }
@@ -212,8 +212,8 @@ impl CrashConfig {
         let source = &self.url;
 
         if source.is_empty() {
-            return Err(CrashError::Config(
-                "Configuration URL is empty. Please set it first with 'crash config url <url>'"
+            return Err(MhoError::Config(
+                "Configuration URL is empty. Please set it first with 'mho config url <url>'"
                     .to_string(),
             ));
         }
@@ -228,12 +228,12 @@ impl CrashConfig {
         let content = if is_url(source) {
             log_info!("Downloading configuration from URL: {}", source);
             download_text(source).await.map_err(|e| {
-                CrashError::Config(format!("Failed to download configuration from URL: {}", e))
+                MhoError::Config(format!("Failed to download configuration from URL: {}", e))
             })?
         } else {
             let source_path = Path::new(source);
             if !source_path.exists() {
-                return Err(CrashError::Config(format!(
+                return Err(MhoError::Config(format!(
                     "Configuration source not found: {} (not a valid URL or local file)",
                     source
                 )));
@@ -241,14 +241,14 @@ impl CrashConfig {
 
             log_info!("Reading configuration from local file: {}", source);
             std::fs::read_to_string(source_path).map_err(|e| {
-                CrashError::Config(format!("Failed to read local configuration file: {}", e))
+                MhoError::Config(format!("Failed to read local configuration file: {}", e))
             })?
         };
 
         let patched_content = patch_config(self.core, &self.web, &content);
 
         std::fs::write(dest, patched_content).map_err(|e| {
-            CrashError::Config(format!(
+            MhoError::Config(format!(
                 "Failed to write configuration to {}: {}",
                 dest.display(),
                 e

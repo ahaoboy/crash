@@ -1,6 +1,6 @@
 // Configuration patching per core type.
 //
-// `patch_config` is a free function rather than a method on `CrashConfig`
+// `patch_config` is a free function rather than a method on `MhoConfig`
 // because it only reads `core` and `web` and never needs `&self` state.
 // Keeping it standalone makes it trivial to unit-test in isolation.
 
@@ -104,7 +104,7 @@ mod tests {
         let out = patch_config(Core::Mihomo, &web(), input);
         assert!(out.contains("tun:"));
         // The default TUN block is prepended, original config kept intact.
-        assert!(out.starts_with("# Crash default tun"));
+        assert!(out.starts_with("# Mho default tun"));
         assert!(out.ends_with(input));
     }
 

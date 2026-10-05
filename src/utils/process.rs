@@ -1,6 +1,6 @@
 // Process management module
 
-use crate::error::{CrashError, Result};
+use crate::error::{MhoError, Result};
 use crate::{log_debug, log_error, log_info};
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -14,7 +14,7 @@ pub fn start(exe_path: &Path, args: Vec<String>, envs: Vec<(&str, &str)>) -> Res
     );
 
     if !exe_path.exists() {
-        return Err(CrashError::Process(format!(
+        return Err(MhoError::Process(format!(
             "Executable not found: {}",
             exe_path.display()
         )));
@@ -37,7 +37,7 @@ pub fn start(exe_path: &Path, args: Vec<String>, envs: Vec<(&str, &str)>) -> Res
         .spawn()
         .map_err(|e| {
             log_error!("Failed to start process {}: {}", exe_path.display(), e);
-            CrashError::Process(format!(
+            MhoError::Process(format!(
                 "Failed to start process {}: {}",
                 exe_path.display(),
                 e
@@ -76,11 +76,11 @@ pub fn get_pid(name: &str) -> Result<u32> {
         .trim()
         .split_whitespace()
         .next()
-        .ok_or_else(|| CrashError::Process(format!("No process found with name: {}", name)))?;
+        .ok_or_else(|| MhoError::Process(format!("No process found with name: {}", name)))?;
 
     pid_str
         .parse::<u32>()
-        .map_err(|e| CrashError::Process(format!("Failed to parse PID '{}': {}", pid_str, e)))
+        .map_err(|e| MhoError::Process(format!("Failed to parse PID '{}': {}", pid_str, e)))
 }
 
 #[cfg(target_os = "linux")]
@@ -90,11 +90,11 @@ pub fn get_pid(name: &str) -> Result<u32> {
     let pid_str = output
         .split_whitespace()
         .next()
-        .ok_or_else(|| CrashError::Process(format!("No process found with name: {}", name)))?;
+        .ok_or_else(|| MhoError::Process(format!("No process found with name: {}", name)))?;
 
     pid_str
         .parse::<u32>()
-        .map_err(|e| CrashError::Process(format!("Failed to parse PID '{}': {}", pid_str, e)))
+        .map_err(|e| MhoError::Process(format!("Failed to parse PID '{}': {}", pid_str, e)))
 }
 
 #[cfg(unix)]
@@ -117,13 +117,13 @@ pub fn kill_process(name_or_path: &str) -> Result<()> {
     let output = Command::new("killall")
         .arg(process_name)
         .output()
-        .map_err(|e| CrashError::Process(format!("Failed to execute killall: {}", e)))?;
+        .map_err(|e| MhoError::Process(format!("Failed to execute killall: {}", e)))?;
 
     if output.status.success() {
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(CrashError::Process(format!(
+        Err(MhoError::Process(format!(
             "Failed to kill process '{}': {}",
             process_name, stderr
         )))
@@ -151,13 +151,13 @@ pub fn get_pid(name: &str) -> Result<u32> {
             if parts.len() >= 2 {
                 let pid_str = parts[1].trim().trim_matches('"');
                 return pid_str.parse::<u32>().map_err(|e| {
-                    CrashError::Process(format!("Failed to parse PID '{}': {}", pid_str, e))
+                    MhoError::Process(format!("Failed to parse PID '{}': {}", pid_str, e))
                 });
             }
         }
     }
 
-    Err(CrashError::Process(format!("Process '{}' not found", name)))
+    Err(MhoError::Process(format!("Process '{}' not found", name)))
 }
 
 #[cfg(windows)]

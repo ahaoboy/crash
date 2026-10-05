@@ -1,10 +1,10 @@
 [package]
-name = "crash"
+name = "mho"
 description = "A Rust port of ShellCrash - A tool for managing proxy cores like Clash/Mihomo/SingBox"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-repository = "https://github.com/ahaoboy/crash"
+repository = "https://github.com/ahaoboy/mho"
 authors = ["ahaoboy"]
 include = ["/src", "/Cargo.toml", "/README.md"]
 

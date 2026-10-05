@@ -1,8 +1,8 @@
 // Command handler implementations
 
 use crate::cli::{Cli, Commands, ConfigCommands, InstallCommands, UpgradeRepo};
-use crate::config::CrashConfig;
-use crate::error::{CrashError, Result};
+use crate::config::MhoConfig;
+use crate::error::{MhoError, Result};
 use crate::log_info;
 use crate::utils::command::execute;
 use crate::utils::monitor::format_status;
@@ -36,7 +36,7 @@ async fn handle_install(force: bool, command: Option<InstallCommands>) -> Result
         command
     );
 
-    let config = CrashConfig::load()?;
+    let config = MhoConfig::load()?;
 
     match command {
         Some(InstallCommands::Core) => {
@@ -72,14 +72,14 @@ async fn handle_ei(args: Vec<String>) -> Result<()> {
     v.extend(args);
     easy_install::run_main(easy_install::Args::parse_from(v))
         .await
-        .map_err(|e| CrashError::External(e.to_string()))
+        .map_err(|e| MhoError::External(e.to_string()))
 }
 
 /// Handle start command
 async fn handle_start(force: bool) -> Result<()> {
     log_info!("Executing start command");
 
-    let mut config = CrashConfig::load()?;
+    let mut config = MhoConfig::load()?;
     config.start(force).await?;
     println!("{} proxy service started successfully!", config.core);
 
@@ -93,7 +93,7 @@ async fn handle_start(force: bool) -> Result<()> {
 async fn handle_stop(force: bool) -> Result<()> {
     log_info!("Executing stop command force: {}", force);
 
-    let mut config = CrashConfig::load()?;
+    let mut config = MhoConfig::load()?;
     config.stop(force)?;
     println!("{} proxy service stopped successfully!", config.core);
 
@@ -106,13 +106,13 @@ async fn handle_stop(force: bool) -> Result<()> {
 /// Handle status command
 async fn handle_status() -> Result<()> {
     log_info!("Executing status command");
-    let config = CrashConfig::load()?;
+    let config = MhoConfig::load()?;
     let status = format_status(&config).await;
     println!("{}", status);
     Ok(())
 }
 
-/// Cron schedule entries installed on Unix systems: (cron expression, crash subcommand).
+/// Cron schedule entries installed on Unix systems: (cron expression, mho subcommand).
 #[cfg(unix)]
 const UNIX_SCHEDULES: [(&str, &str); 2] = [("0 3 * * 3", "run-task"), ("*/10 * * * *", "start")];
 
@@ -124,14 +124,13 @@ fn handle_task() -> Result<()> {
 
     log_info!("Executing task command");
 
-    let exe = std::env::current_exe().map_err(|e| {
-        CrashError::Platform(format!("Failed to get current executable path: {}", e))
-    })?;
+    let exe = std::env::current_exe()
+        .map_err(|e| MhoError::Platform(format!("Failed to get current executable path: {}", e)))?;
 
     let exe_path = exe.to_string_lossy();
 
     if which("crontab").is_err() {
-        return Err(CrashError::Platform("crontab not found".to_string()));
+        return Err(MhoError::Platform("crontab not found".to_string()));
     }
 
     let user = get_user();
@@ -173,21 +172,20 @@ fn handle_task() -> Result<()> {
 fn handle_task() -> Result<()> {
     log_info!("Executing task command");
 
-    let exe = std::env::current_exe().map_err(|e| {
-        CrashError::Platform(format!("Failed to get current executable path: {}", e))
-    })?;
+    let exe = std::env::current_exe()
+        .map_err(|e| MhoError::Platform(format!("Failed to get current executable path: {}", e)))?;
 
     let exe_path = exe.to_string_lossy();
 
     let tasks = [
         (
-            "CrashRunTask",
+            "MhoRunTask",
             "--schedule run-task",
             "WEEKLY",
             "WED",
             "03:00",
         ),
-        ("CrashStart", "--schedule start", "MINUTE", "", "00:00"),
+        ("MhoStart", "--schedule start", "MINUTE", "", "00:00"),
     ];
 
     for (name, subcmd, schedule, days, time) in tasks {
@@ -227,7 +225,7 @@ fn handle_task() -> Result<()> {
 #[cfg(windows)]
 fn handle_remove_task() -> Result<()> {
     println!("Removing Windows scheduled task");
-    for name in ["CrashRunTask", "CrashStart"] {
+    for name in ["MhoRunTask", "MhoStart"] {
         let status = execute("schtasks", &["/delete", "/tn", name, "/f"]);
         if status.is_ok() {
             println!("Task '{}' deleted successfully.", name);
@@ -245,9 +243,8 @@ pub fn handle_remove_task() -> Result<()> {
     let current = execute("crontab", &["-l"])?;
     let mut new_lines = Vec::new();
 
-    let exe = std::env::current_exe().map_err(|e| {
-        CrashError::Platform(format!("Failed to get current executable path: {}", e))
-    })?;
+    let exe = std::env::current_exe()
+        .map_err(|e| MhoError::Platform(format!("Failed to get current executable path: {}", e)))?;
 
     let exe_path = exe.to_string_lossy();
 
@@ -299,7 +296,7 @@ async fn handle_run_task() -> Result<()> {
 
 /// Handle update-url command
 async fn handle_update_url(force: bool) -> Result<()> {
-    let config = CrashConfig::load()?;
+    let config = MhoConfig::load()?;
     log_info!(
         "Updating {} configuration from URL (force: {})",
         config.core,
@@ -315,7 +312,7 @@ async fn handle_update_url(force: bool) -> Result<()> {
 async fn handle_upgrade(repo: UpgradeRepo) -> Result<()> {
     log_info!("Executing upgrade command");
 
-    let config = CrashConfig::load()?;
+    let config = MhoConfig::load()?;
     config.upgrade(repo).await?;
 
     Ok(())
@@ -324,8 +321,8 @@ async fn handle_upgrade(repo: UpgradeRepo) -> Result<()> {
 /// Load the config, apply a mutation, save it, and print the message returned
 /// by the closure. Centralises the load/save/print boilerplate that every
 /// `config <field> <value>` subcommand would otherwise repeat.
-fn mutate_config<F: FnOnce(&mut CrashConfig) -> String>(f: F) -> Result<()> {
-    let mut config = CrashConfig::load()?;
+fn mutate_config<F: FnOnce(&mut MhoConfig) -> String>(f: F) -> Result<()> {
+    let mut config = MhoConfig::load()?;
     let msg = f(&mut config);
     config.save()?;
     println!("{}", msg);
@@ -338,7 +335,7 @@ fn handle_config(command: Option<ConfigCommands>) -> Result<()> {
 
     match command {
         None => {
-            let config = CrashConfig::load()?;
+            let config = MhoConfig::load()?;
             let json = serde_json::to_string_pretty(&config)?;
             println!("{}", json);
         }
@@ -347,42 +344,42 @@ fn handle_config(command: Option<ConfigCommands>) -> Result<()> {
                 c.url = url;
                 format!("Configuration URL set to: {}", c.url)
             })?,
-            None => println!("{}", CrashConfig::load()?.url),
+            None => println!("{}", MhoConfig::load()?.url),
         },
         Some(ConfigCommands::Proxy { value }) => match value {
             Some(proxy) => mutate_config(|c| {
                 c.proxy = proxy;
                 format!("Proxy set to: {}", c.proxy)
             })?,
-            None => println!("{}", CrashConfig::load()?.proxy),
+            None => println!("{}", MhoConfig::load()?.proxy),
         },
         Some(ConfigCommands::Ui { value }) => match value {
             Some(ui) => mutate_config(|c| {
                 c.web.ui = ui;
                 format!("Web UI set to: {}", c.web.ui)
             })?,
-            None => println!("{}", CrashConfig::load()?.web.ui),
+            None => println!("{}", MhoConfig::load()?.web.ui),
         },
         Some(ConfigCommands::Target { value }) => match value {
             Some(target) => mutate_config(|c| {
                 c.target = target;
                 format!("Target set to: {}", c.target)
             })?,
-            None => println!("{}", CrashConfig::load()?.target),
+            None => println!("{}", MhoConfig::load()?.target),
         },
         Some(ConfigCommands::Host { value }) => match value {
             Some(host) => mutate_config(|c| {
                 c.web.host = host;
                 format!("Web host set to: {}", c.web.host)
             })?,
-            None => println!("{}", CrashConfig::load()?.web.host),
+            None => println!("{}", MhoConfig::load()?.web.host),
         },
         Some(ConfigCommands::Secret { value }) => match value {
             Some(secret) => mutate_config(|c| {
                 c.web.secret = secret;
                 "Web secret updated successfully!".to_string()
             })?,
-            None => println!("{}", CrashConfig::load()?.web.secret),
+            None => println!("{}", MhoConfig::load()?.web.secret),
         },
         Some(ConfigCommands::MaxRuntime { value }) => match value {
             Some(hours) => mutate_config(|c| {
@@ -393,7 +390,7 @@ fn handle_config(command: Option<ConfigCommands>) -> Result<()> {
                     format!("Maximum runtime set to {} hours", hours)
                 }
             })?,
-            None => println!("{}", CrashConfig::load()?.max_runtime_hours),
+            None => println!("{}", MhoConfig::load()?.max_runtime_hours),
         },
     }
 

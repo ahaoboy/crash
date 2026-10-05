@@ -3,10 +3,10 @@
 // These are split out of `config/mod.rs` so that the storage / validation
 // code in `mod.rs` stays small, while process-lifecycle concerns live here.
 
-use super::CrashConfig;
+use super::MhoConfig;
 use super::core::Core;
 use super::get_config_dir;
-use crate::error::{CrashError, Result};
+use crate::error::{MhoError, Result};
 use crate::utils::check_connectivity;
 use crate::utils::command::execute;
 use crate::utils::current_timestamp;
@@ -14,7 +14,7 @@ use crate::utils::process::{get_pid, start, stop};
 use crate::utils::tun::{ensure_tun_device, mihomo_tun_enabled, singbox_tun_enabled};
 use crate::{log_debug, log_info};
 
-impl CrashConfig {
+impl MhoConfig {
     /// Start the proxy core, restarting it first if `force` or if the runtime
     /// budget has been exceeded.
     pub async fn start(&mut self, force: bool) -> Result<()> {
@@ -22,8 +22,8 @@ impl CrashConfig {
 
         if self.stop_force {
             if !force {
-                return Err(CrashError::Process(
-                    "Skip starting proxy core: run 'crash start -f' instead.".to_string(),
+                return Err(MhoError::Process(
+                    "Skip starting proxy core: run 'mho start -f' instead.".to_string(),
                 ));
             } else {
                 self.stop_force = false;
@@ -101,7 +101,7 @@ impl CrashConfig {
         let path = self.core_config_path();
 
         let config = std::fs::read_to_string(&path).map_err(|e| {
-            CrashError::Config(format!(
+            MhoError::Config(format!(
                 "Failed to read core config {}: {}",
                 path.display(),
                 e
@@ -110,10 +110,10 @@ impl CrashConfig {
 
         let tun_enabled = match self.core {
             Core::Mihomo | Core::Clash => mihomo_tun_enabled(&config).map_err(|e| {
-                CrashError::Config(format!("Invalid config {}: {}", path.display(), e))
+                MhoError::Config(format!("Invalid config {}: {}", path.display(), e))
             })?,
             Core::Singbox => singbox_tun_enabled(&config).map_err(|e| {
-                CrashError::Config(format!("Invalid config {}: {}", path.display(), e))
+                MhoError::Config(format!("Invalid config {}: {}", path.display(), e))
             })?,
         };
 
@@ -131,7 +131,7 @@ impl CrashConfig {
         let exe_path = self.core.exe_path(&get_config_dir());
 
         if !exe_path.exists() {
-            return Err(CrashError::Process(format!(
+            return Err(MhoError::Process(format!(
                 "Core executable not found: {}. Please run 'install' first.",
                 exe_path.display()
             )));
@@ -184,7 +184,7 @@ impl CrashConfig {
 
         if !exe_path.exists() {
             log_debug!("Core executable not found: {}", exe_path.display());
-            return Err(CrashError::Config("Core executable not found".to_string()));
+            return Err(MhoError::Config("Core executable not found".to_string()));
         }
 
         let args = match self.core {
@@ -195,7 +195,7 @@ impl CrashConfig {
 
         // Parse version from output (format: "Mihomo version 1.19.15")
         let Some(version) = output.split_whitespace().nth(2).map(|s| s.to_string()) else {
-            return Err(CrashError::Config("Core version not found".to_string()));
+            return Err(MhoError::Config("Core version not found".to_string()));
         };
 
         log_debug!("Core version: {:?}", version);

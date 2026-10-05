@@ -79,7 +79,7 @@ pub fn is_url(s: &str) -> bool {
 /// Used as a proxy health check: under TUN + `auto-route` (the mihomo
 /// default), this traffic is captured by the TUN device and forwarded
 /// through the proxy, so a success implies the proxy is forwarding
-/// correctly. A failure triggers a restart in `CrashConfig::start`.
+/// correctly. A failure triggers a restart in `MhoConfig::start`.
 ///
 /// The short timeout prevents a stuck proxy from hanging the (scheduled)
 /// `start` command indefinitely.

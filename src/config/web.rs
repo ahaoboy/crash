@@ -24,7 +24,7 @@ use strum::{Display, EnumString, IntoStaticStr};
 )]
 pub enum UiType {
     #[default]
-    CrashUI,
+    MhoUI,
     Metacubexd,
     Yacd,
 }
@@ -73,7 +73,7 @@ impl WebConfig {
                     }
                 }
             }
-            UiType::CrashUI => {
+            UiType::MhoUI => {
                 let start_pattern = "<meta name=\"version\" content=\"";
                 if let Some(start) = content.find(start_pattern) {
                     let start = start + start_pattern.len();
@@ -93,7 +93,7 @@ impl WebConfig {
         match self.ui {
             Yacd => "yacd.tar.gz".to_string(),
             Metacubexd => "metacubexd.tar.gz".to_string(),
-            CrashUI => "crash-ui.tar.gz".to_string(),
+            MhoUI => "mho-ui.tar.gz".to_string(),
         }
     }
 
@@ -101,13 +101,13 @@ impl WebConfig {
     pub fn ui_url(&self) -> crate::error::Result<String> {
         Resource::File {
             owner: "ahaoboy".to_string(),
-            repo: "crash-assets".to_string(),
+            repo: "mho-assets".to_string(),
             reference: "main".to_string(),
             path: self.ui_release_file_name(),
         }
         .url(&Proxy::Github)
         .ok_or_else(|| {
-            crate::error::CrashError::Download("Failed to get UI download URL".to_string())
+            crate::error::MhoError::Download("Failed to get UI download URL".to_string())
         })
     }
 }

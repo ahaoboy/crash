@@ -1,6 +1,6 @@
 // Download management module with retry logic
 
-use crate::error::{CrashError, Result};
+use crate::error::{MhoError, Result};
 use crate::{log_debug, log_error, log_info, log_warn};
 use reqwest::Client;
 use std::sync::OnceLock;
@@ -70,7 +70,7 @@ pub async fn download_text(url: &str) -> Result<String> {
     }
 
     Err(last_error
-        .unwrap_or_else(|| CrashError::Download("Download failed after all retries".to_string())))
+        .unwrap_or_else(|| MhoError::Download("Download failed after all retries".to_string())))
 }
 
 /// Single text download attempt
@@ -81,10 +81,10 @@ async fn download_text_attempt(url: &str) -> Result<String> {
         .get(url)
         .send()
         .await
-        .map_err(|e| CrashError::Download(format!("HTTP request failed: {}", e)))?;
+        .map_err(|e| MhoError::Download(format!("HTTP request failed: {}", e)))?;
 
     if !response.status().is_success() {
-        return Err(CrashError::Download(format!(
+        return Err(MhoError::Download(format!(
             "HTTP request failed with status: {}",
             response.status()
         )));
@@ -94,7 +94,7 @@ async fn download_text_attempt(url: &str) -> Result<String> {
     let text = response
         .text()
         .await
-        .map_err(|e| CrashError::Download(format!("Failed to read response body: {}", e)))?;
+        .map_err(|e| MhoError::Download(format!("Failed to read response body: {}", e)))?;
 
     Ok(text)
 }

@@ -8,7 +8,7 @@
 //   - `patcher`  : core-specific config patching
 
 use crate::config::core::Core;
-use crate::error::{CrashError, Result};
+use crate::error::{MhoError, Result};
 use crate::log_info;
 use crate::utils::fs::{atomic_write, ensure_dir};
 use crate::utils::get_dir_size;
@@ -25,13 +25,13 @@ pub mod web;
 
 pub use web::WebConfig;
 
-const APP_CONFIG_DIR: &str = "crash_config";
-const APP_CONFIG_NAME: &str = "crash_config.json";
+const APP_CONFIG_DIR: &str = "mho_config";
+const APP_CONFIG_NAME: &str = "mho_config.json";
 const APP_LOG_DIR: &str = "logs";
 
-/// Main configuration structure for the Crash application.
+/// Main configuration structure for the Mho application.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CrashConfig {
+pub struct MhoConfig {
     pub version: String,
     pub start_time: u64,
     pub core: Core,
@@ -51,7 +51,7 @@ pub struct CrashConfig {
     pub check_url: Option<String>,
 }
 
-impl Default for CrashConfig {
+impl Default for MhoConfig {
     fn default() -> Self {
         Self {
             version: env!("CARGO_PKG_VERSION").to_string(),
@@ -68,7 +68,7 @@ impl Default for CrashConfig {
     }
 }
 
-impl CrashConfig {
+impl MhoConfig {
     /// Load configuration from disk, creating a default if it does not exist.
     pub fn load() -> Result<Self> {
         let config_path = get_config_path();
@@ -76,15 +76,15 @@ impl CrashConfig {
 
         let config = if config_path.exists() {
             let data = std::fs::read_to_string(&config_path).map_err(|e| {
-                CrashError::Config(format!(
+                MhoError::Config(format!(
                     "Failed to read config file {}: {}",
                     config_path.display(),
                     e
                 ))
             })?;
 
-            let config: CrashConfig = serde_json::from_str(&data)
-                .map_err(|e| CrashError::Config(format!("Failed to parse config file: {}", e)))?;
+            let config: MhoConfig = serde_json::from_str(&data)
+                .map_err(|e| MhoError::Config(format!("Failed to parse config file: {}", e)))?;
             config.validate()?;
             config
         } else {
@@ -105,7 +105,7 @@ impl CrashConfig {
         ensure_dir(&get_config_dir())?;
 
         let json = serde_json::to_string_pretty(self)
-            .map_err(|e| CrashError::Config(format!("Failed to serialize config: {}", e)))?;
+            .map_err(|e| MhoError::Config(format!("Failed to serialize config: {}", e)))?;
 
         atomic_write(&config_path, &json)?;
 
@@ -115,7 +115,7 @@ impl CrashConfig {
     /// Validate configuration values.
     pub fn validate(&self) -> Result<()> {
         if get_config_dir().to_str().is_none() {
-            return Err(CrashError::Config(
+            return Err(MhoError::Config(
                 "Config directory path contains invalid UTF-8".to_string(),
             ));
         }
@@ -123,16 +123,16 @@ impl CrashConfig {
         // Validate web host format: must be "[host]:port" with a parseable port.
         let host = self.web.host.trim();
         if host.is_empty() {
-            return Err(CrashError::Config("Web host is empty".to_string()));
+            return Err(MhoError::Config("Web host is empty".to_string()));
         }
         let Some(port_part) = host.rsplit_once(':') else {
-            return Err(CrashError::Config(format!(
+            return Err(MhoError::Config(format!(
                 "Invalid web host format (expected `[host]:port`): {}",
                 self.web.host
             )));
         };
         if port_part.1.parse::<u16>().is_err() {
-            return Err(CrashError::Config(format!(
+            return Err(MhoError::Config(format!(
                 "Invalid web host port (expected 0-65535): {}",
                 self.web.host
             )));
@@ -146,14 +146,14 @@ impl CrashConfig {
         get_config_dir().join(self.core.config_file_name())
     }
 
-    /// Total size in bytes of the on-disk crash config directory.
+    /// Total size in bytes of the on-disk mho config directory.
     pub fn get_size(&self) -> u64 {
         get_dir_size(&get_config_dir())
     }
 }
 
-/// Directory holding the crash config, logs and installed assets.
-/// Lives next to the `crash` executable so an install is self-contained.
+/// Directory holding the mho config, logs and installed assets.
+/// Lives next to the `mho` executable so an install is self-contained.
 pub fn get_config_dir() -> PathBuf {
     std::env::current_exe()
         .ok()

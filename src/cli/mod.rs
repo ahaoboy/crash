@@ -15,7 +15,7 @@ const VERSION: &str = const_str::concat!(CARGO_PKG_VERSION, " ", GIT_HASH);
 
 /// Main CLI structure
 #[derive(Parser, Clone, Debug)]
-#[command(name = "crash", version=VERSION)]
+#[command(name = "mho", version=VERSION)]
 #[command(about = "A tool for managing proxy cores like Clash/Mihomo/SingBox", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
@@ -40,16 +40,16 @@ pub struct Cli {
     ValueEnum,
 )]
 pub enum UpgradeRepo {
-    Crash,
+    Mho,
     #[default]
-    CrashAssets,
+    MhoAssets,
 }
 
 impl std::fmt::Display for UpgradeRepo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            UpgradeRepo::Crash => write!(f, "crash"),
-            UpgradeRepo::CrashAssets => write!(f, "crash-assets"),
+            UpgradeRepo::Mho => write!(f, "mho"),
+            UpgradeRepo::MhoAssets => write!(f, "mho-assets"),
         }
     }
 }
@@ -157,9 +157,9 @@ pub enum Commands {
         command: Option<ConfigCommands>,
     },
 
-    /// Upgrade crash to the latest version
+    /// Upgrade mho to the latest version
     Upgrade {
-        #[arg(default_value_t = UpgradeRepo::CrashAssets, ignore_case = true)]
+        #[arg(default_value_t = UpgradeRepo::MhoAssets, ignore_case = true)]
         repo: UpgradeRepo,
     },
 

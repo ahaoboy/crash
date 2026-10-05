@@ -1,13 +1,13 @@
 // File system utilities
 
-use crate::error::{CrashError, Result};
+use crate::error::{MhoError, Result};
 use std::path::Path;
 
 /// Ensures a directory exists, creating it if necessary
 pub fn ensure_dir(path: &Path) -> Result<()> {
     if !path.exists() {
         std::fs::create_dir_all(path).map_err(|e| {
-            CrashError::Io(std::io::Error::new(
+            MhoError::Io(std::io::Error::new(
                 e.kind(),
                 format!("Failed to create directory {}: {}", path.display(), e),
             ))
@@ -26,7 +26,7 @@ pub fn atomic_write(path: &Path, content: &str) -> Result<()> {
     // Write to temporary file first
     let temp_path = path.with_extension("tmp");
     std::fs::write(&temp_path, content).map_err(|e| {
-        CrashError::Io(std::io::Error::new(
+        MhoError::Io(std::io::Error::new(
             e.kind(),
             format!(
                 "Failed to write to temp file {}: {}",
@@ -38,7 +38,7 @@ pub fn atomic_write(path: &Path, content: &str) -> Result<()> {
 
     // Rename temp file to target (atomic operation)
     std::fs::rename(&temp_path, path).map_err(|e| {
-        CrashError::Io(std::io::Error::new(
+        MhoError::Io(std::io::Error::new(
             e.kind(),
             format!(
                 "Failed to rename {} to {}: {}",

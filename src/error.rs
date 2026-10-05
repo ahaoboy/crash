@@ -1,11 +1,11 @@
-// Error types for the Crash application
+// Error types for the Mho application
 // Provides comprehensive error handling with context-rich messages
 
 use thiserror::Error;
 
-/// Main error type for the Crash application
+/// Main error type for the Mho application
 #[derive(Error, Debug)]
-pub enum CrashError {
+pub enum MhoError {
     /// Configuration-related errors
     #[error("Configuration error: {0}")]
     Config(String),
@@ -54,4 +54,4 @@ pub enum CrashError {
 }
 
 /// Result type alias for convenience
-pub type Result<T> = std::result::Result<T, CrashError>;
+pub type Result<T> = std::result::Result<T, MhoError>;

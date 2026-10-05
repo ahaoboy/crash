@@ -34,11 +34,11 @@ jobs:
           cargo install -q --path .
       - name: run
         run: |
-          crash install
-          crash start
-          crash
-          crash stop
-          crash
-      - name: crash_config
+          mho install
+          mho start
+          mho
+          mho stop
+          mho
+      - name: mho_config
         run: |
-          ls -l "$(dirname "$(which crash)")/crash_config"
+          ls -l "$(dirname "$(which mho)")/mho_config"

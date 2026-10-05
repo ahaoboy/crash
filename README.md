@@ -1,6 +1,6 @@
-# Crash
+# Mho
 
-[![Crash Tauri](https://raw.githubusercontent.com/ahaoboy/crash-tauri/main/src-tauri/icons/icon.png)](https://github.com/ahaoboy/crash-tauri)
+[![Mho Tauri](https://raw.githubusercontent.com/ahaoboy/mho-tauri/main/src-tauri/icons/icon.png)](https://github.com/ahaoboy/mho-tauri)
 
 A Rust-based proxy core management tool supporting Clash/Mihomo/SingBox and other proxy cores. This is a Rust port of [ShellCrash](https://github.com/juewuy/ShellCrash).
 
@@ -15,12 +15,12 @@ A Rust-based proxy core management tool supporting Clash/Mihomo/SingBox and othe
 - 🪞 Multiple GitHub mirror support for accelerated downloads
 
 <div style="display: flex;">
-  <img src="./assets/crash.svg" alt="crash"/>
+  <img src="./assets/mho.svg" alt="mho"/>
 </div>
 
 ## Desktop Client
 
-A cross-platform desktop GUI client built with [Tauri](https://tauri.app/): **[crash-tauri](https://github.com/ahaoboy/crash-tauri)**
+A cross-platform desktop GUI client built with [Tauri](https://tauri.app/): **[mho-tauri](https://github.com/ahaoboy/mho-tauri)**
 
 ## Installation
 
@@ -29,7 +29,7 @@ A cross-platform desktop GUI client built with [Tauri](https://tauri.app/): **[c
 Install with a single command using the installation script:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/crash/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/mho/main/install.sh)
 ```
 
 ### Using Proxy for Faster Downloads
@@ -38,31 +38,31 @@ If GitHub access is slow, use a mirror:
 
 ```bash
 # Using gh-proxy mirror
-bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/crash/main/install.sh) --proxy gh-proxy
+bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/mho/main/install.sh) --proxy gh-proxy
 
-curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/crash/blob/main/install.sh | sh -s -- --proxy gh-proxy
-curl -fsSL https://xget.xi-xu.me/gh/ahaoboy/crash/raw/refs/heads/main/install.sh | sh -s -- --proxy xget
+curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/mho/blob/main/install.sh | sh -s -- --proxy gh-proxy
+curl -fsSL https://xget.xi-xu.me/gh/ahaoboy/mho/raw/refs/heads/main/install.sh | sh -s -- --proxy xget
 
 # Using xget mirror
-bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/crash/main/install.sh) --proxy xget
+bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/mho/main/install.sh) --proxy xget
 
 # Using jsdelivr CDN
-bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/crash/main/install.sh) --proxy jsdelivr
+bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/mho/main/install.sh) --proxy jsdelivr
 ```
 
-### crash-assets
+### mho-assets
 
-https://github.com/ahaoboy/crash-assets
+https://github.com/ahaoboy/mho-assets
 
 
 ```bash
-curl -fsSL https://cdn.jsdelivr.net/gh/ahaoboy/crash-assets@main/install.sh | sh -s -- --proxy jsdelivr
+curl -fsSL https://cdn.jsdelivr.net/gh/ahaoboy/mho-assets@main/install.sh | sh -s -- --proxy jsdelivr
 
-curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/crash-assets/blob/main/install.sh | sh -s -- --proxy gh-proxy
+curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/mho-assets/blob/main/install.sh | sh -s -- --proxy gh-proxy
 
-curl -fsSL https://cdn.statically.io/gh/ahaoboy/crash-assets/main/install.sh  | sh -s -- --proxy statically
+curl -fsSL https://cdn.statically.io/gh/ahaoboy/mho-assets/main/install.sh  | sh -s -- --proxy statically
 
-curl -fsSL https://xget.xi-xu.me/gh/ahaoboy/crash-assets/raw/refs/heads/main/install.sh  | sh -s -- --proxy xget
+curl -fsSL https://xget.xi-xu.me/gh/ahaoboy/mho-assets/raw/refs/heads/main/install.sh  | sh -s -- --proxy xget
 ```
 
 ### asusrouter
@@ -70,7 +70,7 @@ curl -fsSL https://xget.xi-xu.me/gh/ahaoboy/crash-assets/raw/refs/heads/main/ins
 
 ```bash
 
-curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/crash-assets/blob/main/install.sh | sh -s -- --proxy gh-proxy --dir /jffs
+curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/mho-assets/blob/main/install.sh | sh -s -- --proxy gh-proxy --dir /jffs
 
 ```
 
@@ -78,15 +78,15 @@ curl -fsSL https://gh-proxy.com/https://github.com/ahaoboy/crash-assets/blob/mai
 
 ```bash
 export EI_DIR=~/.local/bin
-bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/crash/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/ahaoboy/mho/main/install.sh)
 ```
 
 ### Build from Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/ahaoboy/crash.git
-cd crash
+git clone https://github.com/ahaoboy/mho.git
+cd mho
 
 # Build
 cargo build --release
@@ -101,32 +101,32 @@ cargo install --path .
 
 ```bash
 # Install all components (core, ui, geo, task)
-crash install
+mho install
 
 # Force reinstallation of all
-crash install -f
+mho install -f
 
 # Install specific components
-crash install core        # Install proxy core only
-crash install ui          # Install web UI only
-crash install geo         # Install GeoIP databases only
-crash install task        # Install scheduled tasks only
+mho install core        # Install proxy core only
+mho install ui          # Install web UI only
+mho install geo         # Install GeoIP databases only
+mho install task        # Install scheduled tasks only
 
 # Force install specific component
-crash install -f core
+mho install -f core
 ```
 
 ### Service Control
 
 ```bash
 # Start proxy service
-crash start
+mho start
 
 # Stop proxy service
-crash stop
+mho stop
 
 # Check service status
-crash status
+mho status
 ```
 
 ### Configuration Management (config subcommand)
@@ -135,62 +135,62 @@ All configuration options are now unified under the `config` subcommand:
 
 ```bash
 # View all configuration as JSON
-crash config
+mho config
 
 # Configuration URL
-crash config url                # Show current URL
-crash config url <config-url>   # Set configuration URL (support URL or local path)
+mho config url                # Show current URL
+mho config url <config-url>   # Set configuration URL (support URL or local path)
 
 # GitHub download proxy
-crash config proxy              # Show current proxy
-crash config proxy gh-proxy     # Set proxy (direct, gh-proxy, xget, jsdelivr, etc.)
+mho config proxy              # Show current proxy
+mho config proxy gh-proxy     # Set proxy (direct, gh-proxy, xget, jsdelivr, etc.)
 
 # Web UI type
-crash config ui                 # Show current UI
-crash config ui metacubexd      # Set UI (metacubexd, yacd)
+mho config ui                 # Show current UI
+mho config ui metacubexd      # Set UI (metacubexd, yacd)
 # Web controller host
-crash config host               # Show current host
-crash config host :9090         # Set host
+mho config host               # Show current host
+mho config host :9090         # Set host
 
 # Web controller secret
-crash config secret             # Show current secret
-crash config secret <secret>    # Set secret
+mho config secret             # Show current secret
+mho config secret <secret>    # Set secret
 
 # Target platform
-crash config target             # Show current target
-crash config target x86_64-unknown-linux-musl  # Set target
+mho config target             # Show current target
+mho config target x86_64-unknown-linux-musl  # Set target
 
 # Other common targets
-crash config target aarch64-unknown-linux-musl    # ARM64 Linux (musl)
-crash config target x86_64-unknown-linux-gnu      # x86_64 Linux (gnu)
-crash config target aarch64-unknown-linux-gnu     # ARM64 Linux (gnu)
-crash config target x86_64-pc-windows-msvc        # Windows x64
-crash config target aarch64-apple-darwin          # macOS Apple Silicon
-crash config target x86_64-apple-darwin           # macOS Intel
+mho config target aarch64-unknown-linux-musl    # ARM64 Linux (musl)
+mho config target x86_64-unknown-linux-gnu      # x86_64 Linux (gnu)
+mho config target aarch64-unknown-linux-gnu     # ARM64 Linux (gnu)
+mho config target x86_64-pc-windows-msvc        # Windows x64
+mho config target aarch64-apple-darwin          # macOS Apple Silicon
+mho config target x86_64-apple-darwin           # macOS Intel
 
 # Maximum runtime (hours, 0 = disabled)
-crash config max-runtime        # Show current max-runtime
-crash config max-runtime 24     # Set max-runtime to 24 hours
-crash config max-runtime 0      # Disable automatic restart
+mho config max-runtime        # Show current max-runtime
+mho config max-runtime 24     # Set max-runtime to 24 hours
+mho config max-runtime 0      # Disable automatic restart
 ```
 
 ### Scheduled Tasks
 
 ```bash
 # Install scheduled tasks (via install subcommand)
-crash install task
+mho install task
 
 # Manually run scheduled task
-crash run-task
+mho run-task
 
 # Remove scheduled tasks
-crash remove-task
+mho remove-task
 ```
 
 ### Self-Upgrade
 
 ```bash
-crash upgrade
+mho upgrade
 ```
 
 ### Shell Completions
@@ -199,42 +199,42 @@ Generate shell completion scripts for auto-completion:
 
 ```bash
 # Bash - Add to your shell profile
-crash completions bash > ~/.local/share/bash-completion/completions/crash
+mho completions bash > ~/.local/share/bash-completion/completions/mho
 # Or source directly
-source <(crash completions bash)
+source <(mho completions bash)
 
 # Fish - Install to fish completions directory
-crash completions fish > ~/.config/fish/completions/crash.fish
+mho completions fish > ~/.config/fish/completions/mho.fish
 
 # Zsh
-crash completions zsh > "${fpath[1]}/_crash"
+mho completions zsh > "${fpath[1]}/_mho"
 
 # PowerShell
-crash completions powershell >> $PROFILE
+mho completions powershell >> $PROFILE
 
 # Elvish
-crash completions elvish > ~/.config/elvish/lib/crash.elv
+mho completions elvish > ~/.config/elvish/lib/mho.elv
 ```
 
 ### ei
 
 ```bash
 
-crash ei ahaoboy/coreutils-build --name mktemp
+mho ei ahaoboy/coreutils-build --name mktemp
 
-crash ei ilai-deutel/kibi --proxy gh-proxy
+mho ei ilai-deutel/kibi --proxy gh-proxy
 
 ```
 
 ## Configuration File
 
-Configuration is stored next to the `crash` executable, in a portable
-`crash_config/` subdirectory:
+Configuration is stored next to the `mho` executable, in a portable
+`mho_config/` subdirectory:
 
-- `<crash_dir>/crash_config/crash_config.json`
+- `<mho_dir>/mho_config/mho_config.json`
 
-Where `<crash_dir>` is the directory containing the `crash` binary (the
-parent of `crash` / `crash.exe`). This makes an installation self-contained
+Where `<mho_dir>` is the directory containing the `mho` binary (the
+parent of `mho` / `mho.exe`). This makes an installation self-contained
 and portable.
 
 Example configuration:
@@ -268,24 +268,24 @@ After installing scheduled tasks, the system will automatically:
 ### Linux/macOS (crontab)
 
 ```cron
-0 3 * * 3 ~/.crash/crash run-task
-*/10 * * * * ~/.crash/crash start
+0 3 * * 3 ~/.mho/mho run-task
+*/10 * * * * ~/.mho/mho start
 ```
 
 ### Windows (Task Scheduler)
 
-- `CrashRunTask`: Runs every Wednesday at 03:00
-- `CrashStart`: Runs every 10 minutes
+- `MhoRunTask`: Runs every Wednesday at 03:00
+- `MhoStart`: Runs every 10 minutes
 
 ## Logging
 
-Log files are written next to the `crash` executable, in:
+Log files are written next to the `mho` executable, in:
 
-- `<crash_dir>/crash_config/logs/crash.log` (current)
-- `<crash_dir>/crash_config/logs/crash.log.1` … `crash.log.5` (rotated backups)
+- `<mho_dir>/mho_config/logs/mho.log` (current)
+- `<mho_dir>/mho_config/logs/mho.log.1` … `mho.log.5` (rotated backups)
 
-When `crash.log` reaches 1 MB it is rotated: `crash.log` → `crash.log.1` →
-… → `crash.log.5` (the oldest is dropped). At most 6 files (~6 MB) are
+When `mho.log` reaches 1 MB it is rotated: `mho.log` → `mho.log.1` →
+… → `mho.log.5` (the oldest is dropped). At most 6 files (~6 MB) are
 kept, so log storage is bounded — important on flash-constrained devices
 like routers. Timestamps are RFC 3339 UTC.
 
@@ -321,8 +321,8 @@ Issues and Pull Requests are welcome!
 
 ## Links
 
-- [GitHub Repository](https://github.com/ahaoboy/crash)
-- [Crash Assets](https://github.com/ahaoboy/crash-assets)
-- [Crash UI](https://github.com/ahaoboy/crash-ui)
+- [GitHub Repository](https://github.com/ahaoboy/mho)
+- [Mho Assets](https://github.com/ahaoboy/mho-assets)
+- [Mho UI](https://github.com/ahaoboy/mho-ui)
 - [metacubexd](https://github.com/MetaCubeX/metacubexd)
-- [Issue Tracker](https://github.com/ahaoboy/crash/issues)
+- [Issue Tracker](https://github.com/ahaoboy/mho/issues)
