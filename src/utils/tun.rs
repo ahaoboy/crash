@@ -12,33 +12,23 @@
 //   - device creation    -> `libc::mknod`          (instead of `mknod`)
 //   - device permissions -> `libc::chmod`          (instead of `chmod`)
 //
-// The core config's `tun` section is inspected with `serde-saphyr` (YAML) and
-// `serde_json` (JSON) so the check is a real parse rather than string matching.
+// The core config's `tun` section is inspected with `serde-mihomo` for
+// mihomo/clash (a full, typed parse of `config.yaml`) and `serde_json` for
+// sing-box, so the check is a real parse rather than string matching.
 //
-// Every failure is only logged, never propagated: a missing TUN device must
-// not abort a start that might otherwise succeed (e.g. a non-root user with a
-// non-TUN config, or a platform where TUN is handled differently).
+// Every failure in the device preparation below is only logged, never
+// propagated: a missing TUN device must not abort a start that might otherwise
+// succeed (e.g. a non-root user with a non-TUN config, or a platform where TUN
+// is handled differently). Parsing the config, on the other hand, is fallible:
+// `mihomo_tun_enabled` / `singbox_tun_enabled` return the parser error so the
+// caller can reject a broken config before starting the core.
 
 use serde::Deserialize;
 
-/// Typed view of the Mihomo/Clash `tun` section.
-///
-/// Parsing is type-driven (`serde-saphyr` uses the Rust types as the schema),
-/// so only the single field we care about needs declaring; every other key in
-/// the real config is ignored.
-#[derive(Deserialize)]
-struct MihomoConfig {
-    #[serde(default)]
-    tun: Option<MihomoTun>,
-}
-
-#[derive(Deserialize)]
-struct MihomoTun {
-    #[serde(default)]
-    enable: bool,
-}
-
 /// Typed view of a sing-box config's `inbounds` entries.
+///
+/// mihomo/clash documents are modelled by `serde-mihomo`; sing-box is a
+/// different format, so its `tun` check stays a small local struct.
 #[derive(Deserialize)]
 struct SingboxConfig {
     #[serde(default)]
@@ -58,53 +48,42 @@ fn default_enabled() -> bool {
     true
 }
 
-/// Parse a Mihomo/Clash config, logging and swallowing any parse error.
-///
-/// A config that cannot be parsed yields `None`, so callers treat malformed
-/// input as "no TUN information" rather than failing hard.
-fn parse_mihomo(config: &str) -> Option<MihomoConfig> {
-    match serde_saphyr::from_str::<MihomoConfig>(config) {
-        Ok(parsed) => Some(parsed),
-        Err(e) => {
-            crate::log_debug!("Failed to parse YAML config: {}", e);
-            None
-        }
-    }
+/// Parse a mihomo (Clash.Meta) `config.yaml` with `serde-mihomo`.
+fn parse_mihomo(config: &str) -> Result<serde_mihomo::Config, serde_mihomo::Error> {
+    serde_mihomo::Config::from_yaml_str(config)
 }
 
-/// Whether a Mihomo/Clash YAML config defines a `tun` section at all,
+/// Whether a mihomo (Clash.Meta) YAML config enables TUN (`tun.enable: true`).
+///
+/// Deserializing with `serde-mihomo` means comments, quoting, anchors/merge keys
+/// and the whole document structure are handled by a real parser. The parser
+/// error is returned rather than swallowed, so a caller can validate the config
+/// before starting the core.
+pub fn mihomo_tun_enabled(config: &str) -> Result<bool, serde_mihomo::Error> {
+    Ok(parse_mihomo(config)?.tun.is_some_and(|tun| tun.enable))
+}
+
+/// Whether a mihomo (Clash.Meta) YAML config defines a `tun` section at all,
 /// regardless of whether it is enabled.
 ///
 /// Used by the config patcher to decide whether the default TUN block still
-/// needs to be injected.
+/// needs to be injected. An unparseable document reports `false`, so the
+/// default block is added and the config is repaired on the next download.
 pub fn has_tun_yaml(config: &str) -> bool {
-    parse_mihomo(config).is_some_and(|parsed| parsed.tun.is_some())
-}
-
-/// Whether a Mihomo/Clash YAML config enables TUN (`tun.enable: true`).
-///
-/// Uses `serde-saphyr` rather than a hand-rolled line scan, so comments,
-/// quoting, anchors/merge keys, indentation and block structure are all handled
-/// by a real parser. A config that cannot be parsed is treated as
-/// TUN-disabled, so malformed input can never force device setup on.
-pub fn tun_enabled_yaml(config: &str) -> bool {
-    parse_mihomo(config)
-        .and_then(|parsed| parsed.tun)
-        .is_some_and(|tun| tun.enable)
+    parse_mihomo(config).is_ok_and(|config| config.tun.is_some())
 }
 
 /// Whether a sing-box JSON config declares an enabled `tun` inbound.
-pub fn tun_enabled_json(config: &str) -> bool {
-    match serde_json::from_str::<SingboxConfig>(config) {
-        Ok(parsed) => parsed
-            .inbounds
-            .iter()
-            .any(|inbound| inbound.kind.as_deref() == Some("tun") && inbound.enabled),
-        Err(e) => {
-            crate::log_debug!("Failed to parse JSON config for TUN check: {}", e);
-            false
-        }
-    }
+///
+/// The JSON error is returned rather than swallowed so callers can validate the
+/// config before starting the core.
+pub fn singbox_tun_enabled(config: &str) -> Result<bool, serde_json::Error> {
+    let parsed: SingboxConfig = serde_json::from_str(config)?;
+
+    Ok(parsed
+        .inbounds
+        .iter()
+        .any(|inbound| inbound.kind.as_deref() == Some("tun") && inbound.enabled))
 }
 
 /// Ensure the `tun` kernel module and `/dev/net/tun` device are ready for TUN.
@@ -283,21 +262,16 @@ mod tests {
 
     #[test]
     fn yaml_enabled() {
-        assert!(tun_enabled_yaml("tun:\n  enable: true\n  stack: gVisor\n"));
-        assert!(tun_enabled_yaml("port: 7890\ntun:\n  enable: true\n"));
-        assert!(tun_enabled_yaml("tun:\n  enable: \"true\"\n"));
+        assert!(mihomo_tun_enabled("tun:\n  enable: true\n  stack: gVisor\n").unwrap());
+        assert!(mihomo_tun_enabled("port: 7890\ntun:\n  enable: true\n").unwrap());
     }
 
     #[test]
     fn yaml_disabled_or_absent() {
-        assert!(!tun_enabled_yaml("port: 7890\n"));
-        assert!(!tun_enabled_yaml("tun:\n  enable: false\n"));
+        assert!(!mihomo_tun_enabled("port: 7890\n").unwrap());
+        assert!(!mihomo_tun_enabled("tun:\n  enable: false\n").unwrap());
         // `enable` outside the `tun` block must not count.
-        assert!(!tun_enabled_yaml("other:\n  enable: true\n"));
-        // A later top-level key ends the `tun` block.
-        assert!(!tun_enabled_yaml(
-            "tun:\n  stack: gVisor\nother:\n  enable: true\n"
-        ));
+        assert!(!mihomo_tun_enabled("other:\n  enable: true\n").unwrap());
     }
 
     #[test]
@@ -318,28 +292,47 @@ mod tests {
 
     #[test]
     fn yaml_handles_comments_and_spacing() {
-        assert!(tun_enabled_yaml(
-            "tun: # enable tun\n  enable: true # yes\n"
-        ));
+        assert!(mihomo_tun_enabled("tun: # enable tun\n  enable: true # yes\n").unwrap());
         // A `tun` nested under another key is not the core's TUN section.
-        assert!(!tun_enabled_yaml("proxy:\n  tun:\n    enable: true\n"));
+        assert!(!mihomo_tun_enabled("proxy:\n  tun:\n    enable: true\n").unwrap());
+    }
+
+    #[test]
+    fn yaml_surfaces_parse_errors() {
+        // Not valid YAML at all.
+        assert!(mihomo_tun_enabled("tun: [unclosed\n").is_err());
+        // Valid YAML, but does not match the mihomo schema (proxy without `type`).
+        assert!(mihomo_tun_enabled("proxies:\n  - name: broken\n").is_err());
     }
 
     #[test]
     fn json_enabled() {
-        assert!(tun_enabled_json(
-            r#"{"inbounds":[{"type":"tun","enabled":true}]}"#
-        ));
+        assert!(singbox_tun_enabled(r#"{"inbounds":[{"type":"tun","enabled":true}]}"#).unwrap());
         // `enabled` omitted defaults to true in sing-box.
-        assert!(tun_enabled_json(r#"{"inbounds":[{"type":"tun"}]}"#));
+        assert!(singbox_tun_enabled(r#"{"inbounds":[{"type":"tun"}]}"#).unwrap());
     }
 
     #[test]
     fn json_disabled_or_absent() {
-        assert!(!tun_enabled_json(
-            r#"{"inbounds":[{"type":"tun","enabled":false}]}"#
-        ));
-        assert!(!tun_enabled_json(r#"{"inbounds":[{"type":"mixed"}]}"#));
-        assert!(!tun_enabled_json("not json"));
+        assert!(!singbox_tun_enabled(r#"{"inbounds":[{"type":"tun","enabled":false}]}"#).unwrap());
+        assert!(!singbox_tun_enabled(r#"{"inbounds":[{"type":"mixed"}]}"#).unwrap());
+    }
+
+    #[test]
+    fn json_surfaces_parse_errors() {
+        assert!(singbox_tun_enabled("not json").is_err());
+    }
+
+    #[test]
+    fn shipped_config_assets_are_valid() {
+        // The default config written by `install` must satisfy the mihomo
+        // schema, otherwise `start` would reject a freshly installed setup.
+        assert!(!mihomo_tun_enabled(include_str!("../assets/mihomo.yaml")).unwrap());
+        assert!(!has_tun_yaml(include_str!("../assets/mihomo.yaml")));
+
+        // The default TUN block injected by the patcher must be valid too.
+        let tun_block = include_str!("../assets/mihomo_tun.yaml");
+        assert!(mihomo_tun_enabled(tun_block).unwrap());
+        assert!(has_tun_yaml(tun_block));
     }
 }

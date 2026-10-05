@@ -10,6 +10,7 @@ include = ["/src", "/Cargo.toml", "/README.md"]
 
 [dependencies]
 serde-saphyr = "1"
+serde-mihomo = { version = "0.1", git = "https://github.com/ahaoboy/serde-mihomo" }
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4"
 serde = { version = "1", features = ["derive"] }

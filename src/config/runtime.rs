@@ -11,8 +11,8 @@ use crate::utils::check_connectivity;
 use crate::utils::command::execute;
 use crate::utils::current_timestamp;
 use crate::utils::process::{get_pid, start, stop};
-use crate::utils::tun::{ensure_tun_device, tun_enabled_json, tun_enabled_yaml};
-use crate::{log_debug, log_info, log_warn};
+use crate::utils::tun::{ensure_tun_device, mihomo_tun_enabled, singbox_tun_enabled};
+use crate::{log_debug, log_info};
 
 impl CrashConfig {
     /// Start the proxy core, restarting it first if `force` or if the runtime
@@ -67,10 +67,14 @@ impl CrashConfig {
             }
         }
 
-        // TUN device prep is only meaningful when the active core config
-        // enables TUN; skip it entirely otherwise. Failures inside are logged
-        // and never abort the start.
-        if self.tun_enabled() {
+        // Validate the core config before touching the device or spawning the
+        // core: an unparseable config is reported here instead of leaving a
+        // core that starts and immediately exits.
+        let tun_enabled = self.check_core_config()?;
+
+        // TUN device prep is only meaningful when the config enables TUN; skip
+        // it entirely otherwise. Failures inside are logged and never abort.
+        if tun_enabled {
             ensure_tun_device();
         } else {
             log_info!("TUN not enabled in core config, skipping TUN device setup");
@@ -84,29 +88,42 @@ impl CrashConfig {
         Ok(())
     }
 
-    /// Whether the active core's configuration enables TUN.
+    /// Read and validate the core's configuration file before starting.
     ///
-    /// Gates the TUN device preparation: without TUN there is no point
-    /// touching the `tun` kernel module or `/dev/net/tun`. A config that is
-    /// missing or cannot be parsed is treated as TUN-disabled, so this check
-    /// can never block a start on its own.
-    pub fn tun_enabled(&self) -> bool {
+    /// Returns whether the validated config enables TUN, so the caller gates
+    /// TUN device preparation on the same parse.
+    ///
+    /// mihomo/clash documents are deserialized against the full mihomo schema
+    /// with `serde-mihomo`; a sing-box document must be valid JSON. A config
+    /// that is missing, unreadable or structurally invalid is reported as an
+    /// error rather than silently skipping the TUN check.
+    pub fn check_core_config(&self) -> Result<bool> {
         let path = self.core_config_path();
-        let Ok(config) = std::fs::read_to_string(&path) else {
-            log_warn!(
-                "Failed to read core config {}, assuming TUN disabled",
-                path.display()
-            );
-            return false;
+
+        let config = std::fs::read_to_string(&path).map_err(|e| {
+            CrashError::Config(format!(
+                "Failed to read core config {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        let tun_enabled = match self.core {
+            Core::Mihomo | Core::Clash => mihomo_tun_enabled(&config).map_err(|e| {
+                CrashError::Config(format!("Invalid config {}: {}", path.display(), e))
+            })?,
+            Core::Singbox => singbox_tun_enabled(&config).map_err(|e| {
+                CrashError::Config(format!("Invalid config {}: {}", path.display(), e))
+            })?,
         };
 
-        let enabled = match self.core {
-            Core::Mihomo | Core::Clash => tun_enabled_yaml(&config),
-            Core::Singbox => tun_enabled_json(&config),
-        };
+        log_debug!(
+            "Core config {} is valid, TUN enabled: {}",
+            path.display(),
+            tun_enabled
+        );
 
-        log_debug!("TUN enabled in {}: {}", path.display(), enabled);
-        enabled
+        Ok(tun_enabled)
     }
 
     /// Spawn the core executable with the right arguments for the current core.
